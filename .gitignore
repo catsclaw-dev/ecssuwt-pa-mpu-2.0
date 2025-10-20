@@ -1,0 +1,88 @@
+# --- Python базовое ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# --- Виртуальные окружения ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Зависимости/сборки ---
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# --- Логи и отладка ---
+logs/
+*.log
+celerybeat-schedule
+celerybeat.pid
+
+# --- Тестовые артефакты ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Типизация/линтеры ---
+.mypy_cache/
+.dmypy.json
+.pytype/
+.ruff_cache/
+.pyre/
+
+# --- IDE/редакторы ---
+# VS Code
+.vscode/
+# PyCharm / IntelliJ
+.idea/
+# Eclipse / другие
+*.iml
+
+# --- Секреты и переменные окружения ---
+.env
+.env.*
+!.env.example
+
+# --- Система/ОС ---
+.DS_Store
+Thumbs.db
+
+# --- Django: статика/медиа, артефакты сборки ---
+# Исходники в app/static/ обычно оставляем, а собранные файлы игнорим
+staticfiles/
+static_root/
+# Медиа-загрузки (если не версионируете)
+media/
+# Скомпилированные локали (если генерируются)
+**/locale/*/LC_MESSAGES/*.mo
+
+# --- База данных SQLite (если используется локально) ---
+db.sqlite3
+*.sqlite3
+
+# --- Файлы конфигурации и локальные переопределения ---
+*.local.py
+settings_local.py
+settings.dev.py
+*.secret.*
+*.pem
+*.key
+
+# --- Docker/Compose вспомогательные ---
+.docker/
+docker-data/
+*.pid
+
+# --- Чёрный список кэшей/временных ---
+*.tmp
+*.temp
+*.swp
+*.swo

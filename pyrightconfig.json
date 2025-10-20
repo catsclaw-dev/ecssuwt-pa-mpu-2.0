@@ -1,0 +1,6 @@
+{
+  "venv": "venv",
+  "venvPath": ".",
+  "reportImplicitStringConcatenation": "none",
+  "typeCheckingMode": "basic"
+}

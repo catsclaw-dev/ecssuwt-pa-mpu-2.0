@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content%}
+<h2>Вход</h2>
+<form method="post">
+    {% csrf_token %}
+    <label>Логин: <input type="text" name="username" required /></label><br />
+    <label>Пароль: <input type="password" name="password" required /></label
+    ><br />
+    <button type="submit">Войти</button>
+    {% if form.errors %}
+    <p style="color: red">Неверный логин или пароль</p>
+    {% endif %}
+</form>
+{% endblock %}
