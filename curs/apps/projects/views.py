@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
-from django.http import Http404, HttpResponseForbidden
-from django.db import connection
+from django.http import Http404
+from .mixins import ProjectAccessMixin
 from .repo import (
     get_student_id_by_user,
     get_professor_id_by_user,
@@ -31,41 +31,6 @@ class MyProjectsView(LoginRequiredMixin, TemplateView):
         else:  # ADMIN
             ctx["projects"] = get_projects_for_admin()
         return ctx
-
-
-class ProjectAccessMixin:
-    def _is_member(self, user, project_id: int) -> bool:
-        uid = getattr(user, "user_id", None) or user.pk
-        role = getattr(user, "role", None)
-        with connection.cursor() as cur:
-            if role == "STUDENT":
-                cur.execute(
-                    """
-                    SELECT 1 FROM project_members pm
-                    JOIN students s ON s.student_id = pm.member_student
-                    WHERE pm.project_id=%s AND s.user_id=%s
-                """,
-                    [project_id, uid],
-                )
-            elif role == "PROFESSOR":
-                cur.execute(
-                    """
-                    SELECT 1 FROM project_members pm
-                    JOIN professors p ON p.professor_id = pm.member_prof
-                    WHERE pm.project_id=%s AND p.user_id=%s
-                """,
-                    [project_id, uid],
-                )
-            else:  # ADMIN
-                return True
-            return cur.fetchone() is not None
-
-    def dispatch(self, request, project_id: int, *args, **kwargs):
-        if not self._is_member(request.user, project_id):
-            return HttpResponseForbidden(
-                "Доступ только участникам проекта или администратору"
-            )
-        return super().dispatch(request, project_id=project_id, *args, **kwargs)
 
 
 class ProjectDetailView(ProjectAccessMixin, LoginRequiredMixin, TemplateView):

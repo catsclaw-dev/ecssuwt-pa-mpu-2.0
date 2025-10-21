@@ -14,7 +14,8 @@ SQL_ORDER = [
     "07_ins_user.sql",
     "08_project_schedule.sql",
     "09_admin_logs.sql",
-    "10_ins_roles.sql",
+    "10_try_stable_2.sql",
+    "11_new_dls.sql",
 ]
 
 

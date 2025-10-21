@@ -1,6 +1,5 @@
 from functools import wraps
 from django.http import HttpResponseForbidden
-from django.utils.decorators import method_decorator
 
 
 def role_required(*roles):
