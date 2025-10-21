@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block content %}
+<h1>{% if mode=='new' %}Новый проект{% else %}Редактировать проект{% endif %}</h1>
+<form method="post" class="card">{% csrf_token %}
+  <label>Название*<input class="input" name="project_name" value="{{ project.project_name }}"></label><br>
+  <label>Статус
+    <select class="input" name="project_status">
+      {% for s in "active,paused,archived".split(",") %}
+        <option value="{{ s }}" {% if project.project_status==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </label><br>
+  <label>Релиз<input class="input" type="datetime-local" name="release_date" value="{{ project.release_date|date:'Y-m-d\\TH:i' }}"></label><br>
+  <label>Специализация<input class="input" name="specialization" value="{{ project.specialization }}"></label><br>
+  <label>Описание<textarea class="textarea" name="project_description">{{ project.project_description }}</textarea></label><br>
+  <button class="btn">Сохранить</button>
+  <a class="btn btn-secondary" href="{% url 'adminboard:projects-list' %}">Отмена</a>
+</form>
+{% endblock %}

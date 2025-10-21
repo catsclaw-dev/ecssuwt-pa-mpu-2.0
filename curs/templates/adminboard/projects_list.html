@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block content %}
+<h1>Проекты</h1>
+<form method="get" class="card">
+  <input class="input" name="q" value="{{ q }}" placeholder="название/специализация">
+  <select class="input" name="status">
+    <option value="">— все —</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn">Фильтр</button>
+  <a class="btn btn-secondary" href="{% url 'adminboard:project-new' %}">+ Новый</a>
+</form>
+
+<div class="card scrollbox">
+<table>
+  <thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Релиз</th><th>Спец.</th><th></th></tr></thead>
+  <tbody>
+  {% for p in items %}
+    <tr>
+      <td>{{ p.project_id }}</td>
+      <td><a href="{% url 'projects:project-detail' p.project_id %}">{{ p.project_name }}</a></td>
+      <td>{{ p.project_status }}</td>
+      <td>{{ p.release_date|date:"Y-m-d" }}</td>
+      <td>{{ p.specialization }}</td>
+      <td>
+        <a class="btn" href="{% url 'adminboard:project-edit' p.project_id %}">Изм.</a>
+        <form method="post" action="{% url 'adminboard:project-delete' p.project_id %}" style="display:inline">{% csrf_token %}
+          <button class="btn btn-secondary" onclick="return confirm('Удалить проект? Будут удалены задачи/отчёты.')">Удал.</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

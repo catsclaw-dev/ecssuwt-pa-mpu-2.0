@@ -33,6 +33,12 @@
 {% endif %}
 
 <h3>Задачи</h3>
+{% if request.user.role == 'PROFESSOR' or request.user.role == 'ADMIN' %}
+  <p>
+    <a class="btn" href="{% url 'projects:task-new' project.project_id %}">+ Новая задача</a>
+    <a class="btn" href="{% url 'projects:schedule-new' project.project_id %}">+ Событие расписания</a>
+  </p>
+{% endif %}
 <div class="tasks">
   {% for t in tasks %}
     <div class="task">

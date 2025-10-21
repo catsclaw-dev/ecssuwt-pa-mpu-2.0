@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if mode == 'new' %}Новый пользователь{% else %}Редактировать пользователя{% endif %}</h1>
+
+<form method="post" class="card">{% csrf_token %}
+  <label>Логин*<br>
+    <input class="input" name="login" value="{{ user.login }}" required>
+  </label><br>
+
+  <label>Роль*<br>
+    <select class="input" name="role" required>
+      {% for r in roles %}
+        <option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </label><br>
+
+  <label>Имя*<br>
+    <input class="input" name="first_name" value="{{ user.first_name }}" required>
+  </label><br>
+
+  <label>Фамилия*<br>
+    <input class="input" name="last_name" value="{{ user.last_name }}" required>
+  </label><br>
+
+  <label>Пароль{% if mode == 'edit' %} (оставьте пустым, чтобы не менять){% endif %}<br>
+    <input class="input" type="password" name="password" {% if mode == 'new' %}required{% endif %}>
+  </label><br>
+
+  <button class="btn">Сохранить</button>
+  <a class="btn btn-secondary" href="{% url 'adminboard:users-list' %}">Отмена</a>
+</form>
+{% endblock %}

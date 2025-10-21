@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Новое событие расписания</h1>
+<form method="post">
+  {% csrf_token %}
+  <label>Заголовок*<br><input type="text" name="title" class="input" required></label><br>
+  <label>Начало*<br><input type="datetime-local" name="starts_at" class="input" required></label><br>
+  <label>Конец*<br><input type="datetime-local" name="ends_at" class="input" required></label><br>
+  <label>Место<br><input type="text" name="location" class="input"></label><br>
+  <label>Описание<br><textarea name="description" class="textarea"></textarea></label><br>
+  <button class="btn">Добавить</button>
+  <a class="btn btn-secondary" href="{% url 'projects:project-detail' project_id %}">Отмена</a>
+</form>
+{% endblock %}

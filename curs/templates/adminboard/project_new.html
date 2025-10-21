@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Новый проект</h1>
+<form method="post">
+  {% csrf_token %}
+  <label>Название*<br><input name="project_name" class="input" required></label><br>
+  <label>Специализация<br><input name="specialization" class="input"></label><br>
+  <label>Релиз<br><input type="datetime-local" name="release_date" class="input"></label><br>
+  <label>Описание<br><textarea name="project_description" class="textarea"></textarea></label><br>
+  <button class="btn">Создать</button>
+  <a class="btn btn-secondary" href="{% url 'adminboard:index' %}">Отмена</a>
+</form>
+{% endblock %}

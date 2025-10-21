@@ -16,6 +16,8 @@ SQL_ORDER = [
     "09_admin_logs.sql",
     "10_try_stable_2.sql",
     "11_new_dls.sql",
+    "12_create_dls.sql",
+    "13_admin_dls.sql",
 ]
 
 

@@ -1,6 +1,11 @@
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
-from django.http import Http404
+from django.http import Http404, HttpResponseForbidden
+from django.db import connection
+from django.contrib import messages
 from .mixins import ProjectAccessMixin
 from .repo import (
     get_student_id_by_user,
@@ -47,3 +52,114 @@ class ProjectDetailView(ProjectAccessMixin, LoginRequiredMixin, TemplateView):
         ctx["tasks"] = get_project_tasks_with_status(project_id)
         ctx["schedule"] = get_project_schedule(project_id)
         return ctx
+
+
+def _prof_id_by_user(uid):
+    with connection.cursor() as cur:
+        cur.execute("SELECT professor_id FROM professors WHERE user_id=%s", [uid])
+        r = cur.fetchone()
+        return r[0] if r else None
+
+
+def _is_prof_member_of_project(pid, project_id) -> bool:
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM project_members WHERE project_id=%s AND member_prof=%s",
+            [project_id, pid],
+        )
+        return cur.fetchone() is not None
+
+
+def _student_choices_for_project(project_id):
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT s.student_id,
+                   u.last_name||' '||u.first_name||COALESCE(' '||u.middle_name,'') AS fio
+            FROM project_members m
+            JOIN students s ON s.student_id = m.member_student
+            JOIN users u    ON u.user_id    = s.user_id
+            WHERE m.project_id=%s AND m.member_student IS NOT NULL
+            ORDER BY fio
+            """,
+            [project_id],
+        )
+        return cur.fetchall()  # [(id, fio), ...]
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def task_new(request, project_id: int):
+    if request.user.role not in ("PROFESSOR", "ADMIN"):
+        return HttpResponseForbidden("Недостаточно прав")
+
+    if request.user.role == "PROFESSOR":
+        pid = _prof_id_by_user(
+            getattr(request.user, "user_id", None) or request.user.pk
+        )
+        if not pid or not _is_prof_member_of_project(pid, project_id):
+            return HttpResponseForbidden("Вы не прикреплены к проекту")
+
+    if request.method == "POST":
+        name = (request.POST.get("task_name") or "").strip()
+        desc = (request.POST.get("task_description") or "").strip()
+        exec_sid = request.POST.get("executor_student") or None
+        deadline = request.POST.get("task_deadline") or None
+        if not name:
+            messages.error(request, "Название обязательно")
+        else:
+            with connection.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO tasks (project_id, task_name, task_description, executor_student, task_status, task_deadline)
+                    VALUES (%s, %s, %s, %s, 'open', %s)
+                    """,
+                    [project_id, name, desc or None, exec_sid, deadline],
+                )
+            messages.success(request, "Задача создана")
+            return redirect("projects:project-detail", project_id=project_id)
+
+    students = _student_choices_for_project(project_id)
+    return render(
+        request,
+        "projects/task_new.html",
+        {"project_id": project_id, "students": students},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def schedule_new(request, project_id: int):
+    if request.user.role not in ("PROFESSOR", "ADMIN"):
+        return HttpResponseForbidden("Недостаточно прав")
+
+    if request.user.role == "PROFESSOR":
+        pid = _prof_id_by_user(
+            getattr(request.user, "user_id", None) or request.user.pk
+        )
+        if not pid or not _is_prof_member_of_project(pid, project_id):
+            return HttpResponseForbidden("Вы не прикреплены к проекту")
+
+    if request.method == "POST":
+        title = (request.POST.get("title") or "").strip()
+        starts_at = request.POST.get("starts_at") or None
+        ends_at = request.POST.get("ends_at") or None
+        location = (request.POST.get("location") or "").strip() or None
+        desc = (request.POST.get("description") or "").strip() or None
+        if not title or not starts_at or not ends_at:
+            messages.error(request, "Заполните обязательные поля")
+        else:
+            try:
+                with connection.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO project_schedule (project_id, title, description, starts_at, ends_at, location)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        [project_id, title, desc, starts_at, ends_at, location],
+                    )
+                messages.success(request, "Событие добавлено")
+                return redirect("projects:project-detail", project_id=project_id)
+            except Exception:
+                messages.error(request, "Таблица расписания отсутствует")
+    return render(request, "projects/schedule_new.html", {"project_id": project_id})

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Новая задача</h1>
+<form method="post">
+  {% csrf_token %}
+  <label>Название*<br><input type="text" name="task_name" class="input" required></label><br>
+  <label>Описание<br><textarea name="task_description" class="textarea"></textarea></label><br>
+  <label>Исполнитель (студент)<br>
+    <select name="executor_student" class="input">
+      <option value="">— не назначать —</option>
+      {% for sid, fio in students %}<option value="{{ sid }}">{{ fio }}</option>{% endfor %}
+    </select>
+  </label><br>
+  <label>Дедлайн<br><input type="datetime-local" name="task_deadline" class="input"></label><br>
+  <button class="btn">Создать</button>
+  <a class="btn btn-secondary" href="{% url 'projects:project-detail' project_id %}">Отмена</a>
+</form>
+{% endblock %}

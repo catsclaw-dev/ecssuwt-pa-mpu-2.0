@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Пользователи</h1>
+
+<form method="get" class="card" style="display:grid; grid-template-columns: 1fr 200px auto; gap:8px; align-items:center;">
+  <input class="input" name="q" value="{{ q }}" placeholder="логин / имя">
+  <select class="input" name="role">
+    <option value="">— все роли —</option>
+    {% for r in roles %}
+      <option value="{{ r }}" {% if role == r %}selected{% endif %}>{{ r }}</option>
+    {% endfor %}
+  </select>
+  <div>
+    <button class="btn">Фильтр</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:user-new' %}">+ Новый</a>
+  </div>
+</form>
+
+<div class="card scrollbox">
+  <table>
+    <thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>ФИО</th><th>Создан</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.user_id }}</td>
+        <td>{{ u.login }}</td>
+        <td>{{ u.role }}</td>
+        <td>{{ u.last_name }} {{ u.first_name }}</td>
+        <td>{{ u.created_at|date:"Y-m-d H:i" }}</td>
+        <td style="white-space:nowrap">
+          <a class="btn" href="{% url 'adminboard:user-edit' u.user_id %}">Изм.</a>
+          <form method="post" action="{% url 'adminboard:user-delete' u.user_id %}" style="display:inline">{% csrf_token %}
+            <button class="btn btn-secondary" onclick="return confirm('Удалить пользователя?')">Удал.</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Ничего не найдено</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:8px">
+  {% if page > 1 %}<a class="btn btn-secondary" href="?q={{ q }}&role={{ role }}&page={{ page|add:-1 }}">← Назад</a>{% endif %}
+  {% if has_next %}<a class="btn" href="?q={{ q }}&role={{ role }}&page={{ page|add:1 }}">Далее →</a>{% endif %}
+</div>
+{% endblock %}
