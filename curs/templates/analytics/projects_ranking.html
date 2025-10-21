@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Статистика: рейтинг проектов</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Проект</th>
+      <th>Готово</th>
+      <th>Прогресс</th>
+      <th>Последняя активность</th>
+      <th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in items %}
+    <tr>
+      <td>{{ forloop.counter0|add:1 }}</td>
+      <td>
+        <a href="{% url 'projects:project-detail' p.project_id %}">{{ p.project_name }}</a><br>
+        <small>{{ p.specialization }}</small>
+      </td>
+      <td>{{ p.done|default:0 }} / {{ p.total|default:0 }}</td>
+      <td style="min-width:220px">
+        <div style="background:#eee;border-radius:6px;overflow:hidden;height:10px;">
+          <div style="height:10px;width:{{ p.ratio_pct }}%;"></div>
+        </div>
+        <small>{{ p.ratio_pct }}%</small>
+      </td>
+      <td>{{ p.last_activity|date:"Y-m-d H:i" }}</td>
+      <td>{{ p.project_status }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if items|length == page_size %}
+  <p><a href="?page={{ page|add:1 }}">Загрузить ещё</a></p>
+{% endif %}
+{% endblock %}

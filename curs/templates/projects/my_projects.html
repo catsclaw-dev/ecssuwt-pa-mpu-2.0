@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Мои проекты</h1>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Название</th><th>Статус</th><th>Создан</th><th>Релиз</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in projects %}
+      <tr>
+        <td>{{ p.project_id }}</td>
+        <td>{{ p.project_name }}</td>
+        <td>{{ p.project_status }}</td>
+        <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ p.release_date|date:"Y-m-d H:i" }}</td>
+        <td><a href="{% url 'projects:project-detail' p.project_id %}">Открыть</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Нет проектов</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

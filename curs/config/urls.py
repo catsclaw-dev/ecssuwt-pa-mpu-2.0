@@ -28,5 +28,15 @@ urlpatterns = [
     path("projects/", include("apps.projects.urls")),
     path("tasks/", include("apps.tasks.urls")),
     path("reports/", include("apps.reports.urls")),
-    path("analytics/", include("apps.analytics.urls")),
+    path(
+        "analytics/",
+        include(("apps.analytics.urls", "analytics"), namespace="analytics"),
+    ),
+    path(
+        "showcase/", include(("apps.showcase.urls", "showcase"), namespace="showcase")
+    ),
+    path(
+        "adminboard/",
+        include(("apps.adminboard.urls", "adminboard"), namespace="adminboard"),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

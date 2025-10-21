@@ -11,7 +11,10 @@ SQL_ORDER = [
     "04_functions.sql",
     "05_triggers.sql",
     # "06_security.sql",
-    "07_seed.sql",
+    "07_ins_user.sql",
+    "08_project_schedule.sql",
+    "09_admin_logs.sql",
+    "10_ins_roles.sql",
 ]
 
 

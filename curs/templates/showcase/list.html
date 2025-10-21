@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Витрина проектов</h1>
+<div class="grid">
+    {% for p in items %}
+        <div class="card">
+            <h3><a href="{% url 'showcase:detail' p.project_id %}">{{ p.project_name }}</a></h3>
+            <div>Статус: {{ p.project_status }}</div>
+            <div>Релиз: {{ p.release_date|date:'Y-m-d' }}</div>
+            <div>Специализация: {{ p.specialization }}</div>
+        </div>
+        {% empty %}
+        <p>Проектов пока нет</p>
+    {% endfor %}
+</div>
+{% if items|length == page_size %}
+    <div class="pager"><a href="?page={{ page|add:1 }}">Загрузить ещё</a></div>
+{% endif %}
+{% endblock %}

@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.tasks",
     "apps.reports",
+    "apps.showcase",
+    "apps.adminboard",
 ]
 
 MIDDLEWARE = [

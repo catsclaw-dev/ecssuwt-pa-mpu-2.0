@@ -14,3 +14,44 @@ main {
 nav a {
     margin-right: 12px;
 }
+
+.messages {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+.msg {
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+.msg.success {
+    background: #e6ffed;
+}
+.msg.info {
+    background: #e7f3ff;
+}
+.msg.warning {
+    background: #fff4e5;
+}
+.msg.error {
+    background: #ffe6e6;
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+.badge-open {
+    background: #eee;
+}
+.badge-in_review {
+    background: #ffd966;
+}
+.badge-done {
+    background: #c6efce;
+}
+.badge-needs_fix {
+    background: #f4c7c3;
+}

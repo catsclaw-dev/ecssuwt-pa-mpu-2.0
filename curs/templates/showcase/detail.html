@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>{{ project.project_name }}</h1>
+<p><b>Статус:</b> {{ project.project_status }} | <b>Создан:</b> {{ project.created_at|date:'Y-m-d H:i' }} | <b>Релиз:</b> {{ project.release_date|date:'Y-m-d H:i' }}</p>
+<p><b>Специализация:</b> {{ project.specialization }}</p>
+<hr>
+<p>{{ project.project_description|default:'Описание отсутствует' }}</p>
+{% endblock %}

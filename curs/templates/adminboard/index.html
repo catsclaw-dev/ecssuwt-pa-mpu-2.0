@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Админ‑панель</h1>
+<form method="get"><input name="q" value="{{ q }}" placeholder="Поиск..."> <button>Искать</button></form>
+
+
+<h2>Проекты</h2>
+<table>
+    <thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Релиз</th><th>Специализация</th></tr></thead>
+    <tbody>
+    {% for p in projects %}
+        <tr>
+            <td>{{ p.project_id }}</td>
+            <td><a href="{% url 'showcase:detail' p.project_id %}">{{ p.project_name }}</a></td>
+            <td>{{ p.project_status }}</td>
+            <td>{{ p.release_date|date:'Y-m-d' }}</td>
+            <td>{{ p.specialization }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+<h2>Пользователи</h2>
+<table>
+    <thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>Создан</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+        <tr>
+            <td>{{ u.user_id }}</td>
+            <td>{{ u.login }}</td>
+            <td>{{ u.role }}</td>
+            <td>{{ u.created_at|date:'Y-m-d H:i' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+<h2>Сводка</h2>
+<ul>
+    <li>Всего задач: {{ tasks_total }}</li>
+    <li>Всего отчётов: {{ reports_total }}</li>
+</ul>
+
+
+<h2>Журнал действий админов</h2>
+<table>
+    <thead><tr><th>ID</th><th>Admin ID</th><th>Action</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for l in logs %}
+        <tr>
+            <td>{{ l.admin_log_id }}</td>
+            <td>{{ l.admin_id }}</td>
+            <td>{{ l.admin_action }}</td>
+            <td>{{ l.log_created_at|date:'Y-m-d H:i' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
