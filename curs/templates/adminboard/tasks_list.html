@@ -1,43 +1,62 @@
-{% extends "base.html" %}{% block content %}
+{% extends "base.html" %}
+{% block content %}
 <h1>Задачи</h1>
-<form method="get" class="card">
-  <input class="input" name="q" value="{{ q }}" placeholder="название">
+
+<form method="get" class="card" style="display:grid;grid-template-columns:1fr 180px 320px auto;gap:8px;align-items:center;">
+  <input class="input" name="q" value="{{ q }}" placeholder="название задачи">
   <select class="input" name="status">
-    <option value="">— все —</option>
-    {% for s in "open,in_review,done".split(",") %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    <option value="">— все статусы —</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
   <select class="input" name="project_id">
     <option value="">— любой проект —</option>
     {% for p in projs %}
-      <option value="{{ p.project_id }}" {% if project_id|default:'' == p.project_id|stringformat:'s' %}selected{% endif %}>[{{ p.project_id }}] {{ p.project_name }}</option>
+      <option value="{{ p.project_id }}" {% if project_id|stringformat:'s' == p.project_id|stringformat:'s' %}selected{% endif %}>
+        [{{ p.project_id }}] {{ p.project_name }}
+      </option>
     {% endfor %}
   </select>
-  <button class="btn">Фильтр</button>
-  <a class="btn btn-secondary" href="{% url 'adminboard:task-new' %}">+ Новая</a>
+  <div>
+    <button class="btn">Фильтр</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:task-new' %}">+ Новая</a>
+  </div>
 </form>
 
 <div class="card scrollbox">
-<table>
-  <thead><tr><th>ID</th><th>Проект</th><th>Название</th><th>Статус</th><th>Дедлайн</th><th></th></tr></thead>
-  <tbody>
-  {% for t in items %}
-    <tr>
-      <td>{{ t.task_id }}</td>
-      <td>[{{ t.project_id }}] {{ t.project_name }}</td>
-      <td>{{ t.task_name }}</td>
-      <td>{{ t.task_status }}</td>
-      <td>{{ t.task_deadline|date:"Y-m-d H:i" }}</td>
-      <td>
-        <a class="btn" href="{% url 'adminboard:task-edit' t.task_id %}">Изм.</a>
-        <form method="post" action="{% url 'adminboard:task-delete' t.task_id %}" style="display:inline">{% csrf_token %}
-          <button class="btn btn-secondary" onclick="return confirm('Удалить задачу?')">Удал.</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Проект</th><th>Название</th><th>Статус</th><th>Дедлайн</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for t in items %}
+        <tr>
+          <td>{{ t.task_id }}</td>
+          <td>[{{ t.project_id }}] {{ t.project_name }}</td>
+          <td>{{ t.task_name }}</td>
+          <td>{{ t.task_status }}</td>
+          <td>{{ t.task_deadline|date:"Y-m-d H:i" }}</td>
+          <td style="white-space:nowrap">
+            <a class="btn" href="{% url 'adminboard:task-edit' t.task_id %}">Изм.</a>
+            <form method="post" action="{% url 'adminboard:task-delete' t.task_id %}" style="display:inline">{% csrf_token %}
+              <button class="btn btn-secondary" onclick="return confirm('Удалить задачу?')">Удал.</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">Ничего не найдено</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:8px">
+  {% if page > 1 %}
+    <a class="btn btn-secondary" href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&page={{ page|add:-1 }}">← Назад</a>
+  {% endif %}
+  {% if has_next %}
+    <a class="btn" href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&page={{ page|add:1 }}">Далее →</a>
+  {% endif %}
 </div>
 {% endblock %}

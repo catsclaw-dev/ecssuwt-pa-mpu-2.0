@@ -1,19 +1,34 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
 <h1>Витрина проектов</h1>
+
 <div class="grid">
-    {% for p in items %}
-        <div class="card">
-            <h3><a href="{% url 'showcase:detail' p.project_id %}">{{ p.project_name }}</a></h3>
-            <div>Статус: {{ p.project_status }}</div>
-            <div>Релиз: {{ p.release_date|date:'Y-m-d' }}</div>
-            <div>Специализация: {{ p.specialization }}</div>
-        </div>
-        {% empty %}
-        <p>Проектов пока нет</p>
-    {% endfor %}
+  {% for p in items %}
+    <div class="card">
+      <h3 style="margin-bottom:6px;">
+        {% if request.user.role == 'ADMIN' %}<span class="muted">[{{ p.project_id }}]</span> {% endif %}
+        <a href="{% url 'showcase:detail' p.project_id %}">{{ p.project_name }}</a>
+      </h3>
+      <div>
+        Статус:
+        <span class="pill{% if p.project_status == 'active' %}{% elif p.project_status == 'paused' %} pill-blue{% else %}{% endif %}">
+          {{ p.project_status }}
+        </span>
+      </div>
+      <div>Релиз: {{ p.release_date|date:"d.m.Y" }}</div>
+      <div>Специализация: {{ p.specialization|default:"—" }}</div>
+    </div>
+  {% empty %}
+    <p>Проектов пока нет</p>
+  {% endfor %}
 </div>
+
 {% if items|length == page_size %}
-    <div class="pager"><a href="?page={{ page|add:1 }}">Загрузить ещё</a></div>
+  <div class="pager" style="margin-top:12px;">
+    {% if page|add:-1 > 0 %}
+      <a class="btn btn-secondary" href="?page={{ page|add:-1 }}">← Назад</a>
+    {% endif %}
+    <a class="btn" href="?page={{ page|add:1 }}">Загрузить ещё →</a>
+  </div>
 {% endif %}
 {% endblock %}

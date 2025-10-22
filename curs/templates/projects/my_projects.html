@@ -1,25 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Мои проекты</h1>
-<table>
-  <thead>
-    <tr>
-      <th>ID</th><th>Название</th><th>Статус</th><th>Создан</th><th>Релиз</th><th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for p in projects %}
+
+<div class="card scrollbox" style="max-height:520px">
+  <table class="table-sm">
+    <thead>
       <tr>
-        <td>{{ p.project_id }}</td>
-        <td>{{ p.project_name }}</td>
-        <td>{{ p.project_status }}</td>
-        <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
-        <td>{{ p.release_date|date:"Y-m-d H:i" }}</td>
-        <td><a href="{% url 'projects:project-detail' p.project_id %}">Открыть</a></td>
+        {% if request.user.role == 'ADMIN' %}<th>ID</th>{% endif %}
+        <th>Название</th>
+        <th>Статус</th>
+        <th>Создан</th>
+        <th>Релиз</th>
+        <th></th>
       </tr>
-    {% empty %}
-      <tr><td colspan="6">Нет проектов</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for p in projects %}
+        <tr>
+          {% if request.user.role == 'ADMIN' %}<td>{{ p.project_id }}</td>{% endif %}
+          <td>{{ p.project_name }}</td>
+          <td>{{ p.project_status }}</td>
+          <td>{{ p.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ p.release_date|date:"d.m.Y H:i" }}</td>
+          <td><a class="btn" href="{% url 'projects:project-detail' p.project_id %}">Открыть</a></td>
+        </tr>
+      {% empty %}
+        {% if request.user.role == 'ADMIN' %}
+          <tr><td colspan="6">Нет проектов</td></tr>
+        {% else %}
+          <tr><td colspan="5">Нет проектов</td></tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

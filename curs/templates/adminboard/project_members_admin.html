@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Участники проекта: [{{ project.project_id }}] {{ project.project_name }}</h1>
+<p><a class="btn btn-secondary" href="{% url 'adminboard:projects-list' %}">← к проектам</a></p>
+
+<!-- КАНДИДАТЫ -->
+<div class="card" style="margin-bottom:12px">
+  <h2>Кандидаты</h2>
+  <form method="get" class="toolbar">
+    <input type="hidden" name="page" value="1">
+    <label><input type="radio" name="sr" value="student" {% if sr == 'student' %}checked{% endif %}> Студенты</label>
+    <label><input type="radio" name="sr" value="professor" {% if sr == 'professor' %}checked{% endif %}> Преподаватели</label>
+    <input class="input" name="c_q" value="{{ c_q }}" placeholder="ФИО/логин/группа/кафедра">
+    <button class="btn">Искать</button>
+    {# сохраняем текущие фильтры списков при обновлении кандидатов #}
+    <input type="hidden" name="s_q" value="{{ s_q }}">
+    <input type="hidden" name="p_q" value="{{ p_q }}">
+  </form>
+
+  <div class="scrollbox" style="margin-top:8px; max-height: 360px;">
+    <table class="table-sm">
+      <thead><tr><th>Кандидат</th><th style="width:230px">Роль в команде</th><th style="width:120px"></th></tr></thead>
+      <tbody>
+      {% for c in candidates %}
+        <tr>
+          <td>{{ c.label }}</td>
+          <td>
+            <form method="post" action="{% url 'adminboard:member-add' project.project_id %}">
+              {% csrf_token %}
+              <input type="hidden" name="kind" value="{{ sr }}">
+              <input type="hidden" name="person_id" value="{{ c.id }}">
+              <input class="input" name="role_in_team" placeholder="напр. Разработчик">
+          </td>
+          <td style="white-space:nowrap">
+              <button class="btn">Добавить</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3">Никого не найдено</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    {% if page > 1 %}
+      <a class="btn btn-secondary" href="?sr={{ sr }}&c_q={{ c_q }}&s_q={{ s_q }}&p_q={{ p_q }}&page={{ page|add:-1 }}">← Назад</a>
+    {% endif %}
+    {% if has_next %}
+      <a class="btn" href="?sr={{ sr }}&c_q={{ c_q }}&s_q={{ s_q }}&p_q={{ p_q }}&page={{ page|add:1 }}">Далее →</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- СТУДЕНТЫ -->
+<div class="card">
+  <div class="toolbar" style="justify-content:space-between">
+    <h3 style="margin:0">Студенты</h3>
+    <form method="get" class="inline">
+      <input type="hidden" name="sr" value="{{ sr }}">
+      <input type="hidden" name="c_q" value="{{ c_q }}">
+      <input type="hidden" name="p_q" value="{{ p_q }}">
+      <input class="input" name="s_q" value="{{ s_q }}" placeholder="Поиск по студентам">
+      <button class="btn btn-secondary">Фильтр</button>
+    </form>
+  </div>
+
+  <div class="scrollbox" style="max-height: 360px;">
+    <table class="table-sm">
+      <thead><tr><th>ФИО</th><th>Группа</th><th>Роль</th><th>В проекте с</th><th></th></tr></thead>
+      <tbody>
+      {% for m in students %}
+        <tr>
+          <td>{{ m.fio }}</td>
+          <td>{{ m.group_number }}</td>
+          <td>
+            <input class="input" name="role_in_team" form="upd-{{ m.id }}" value="{{ m.role_in_team }}" style="max-width:200px">
+          </td>
+          <td>{{ m.joined_at|date:"d.m.Y" }}</td>
+          <td style="white-space:nowrap">
+            <form id="upd-{{ m.id }}" method="post" action="{% url 'adminboard:member-update' m.id %}" class="inline">
+              {% csrf_token %}
+              <button class="btn">Сохранить</button>
+            </form>
+            {% if not m.left_at %}
+              <form method="post" action="{% url 'adminboard:member-leave' m.id %}" class="inline">
+                {% csrf_token %}
+                <button class="btn btn-secondary" onclick="return confirm('Исключить участника из проекта?')">Исключить</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Нет студентов</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ПРЕПОДАВАТЕЛИ -->
+<div class="card" style="margin-top:12px">
+  <div class="toolbar" style="justify-content:space-between">
+    <h3 style="margin:0">Преподаватели</h3>
+    <form method="get" class="inline">
+      <input type="hidden" name="sr" value="{{ sr }}">
+      <input type="hidden" name="c_q" value="{{ c_q }}">
+      <input type="hidden" name="s_q" value="{{ s_q }}">
+      <input class="input" name="p_q" value="{{ p_q }}" placeholder="Поиск по преподавателям">
+      <button class="btn btn-secondary">Фильтр</button>
+    </form>
+  </div>
+
+  <div class="scrollbox" style="max-height: 360px;">
+    <table class="table-sm">
+      <thead><tr><th>ФИО</th><th>Кафедра</th><th>Роль</th><th>В проекте с</th><th></th></tr></thead>
+      <tbody>
+      {% for m in profs %}
+        <tr>
+          <td>{{ m.fio }}</td>
+          <td>{{ m.department }}</td>
+          <td>
+            <input class="input" name="role_in_team" form="upd-p-{{ m.id }}" value="{{ m.role_in_team }}" style="max-width:200px">
+          </td>
+          <td>{{ m.joined_at|date:"d.m.Y" }}</td>
+          <td style="white-space:nowrap">
+            <form id="upd-p-{{ m.id }}" method="post" action="{% url 'adminboard:member-update' m.id %}" class="inline">
+              {% csrf_token %}
+              <button class="btn">Сохранить</button>
+            </form>
+            {% if not m.left_at %}
+              <form method="post" action="{% url 'adminboard:member-leave' m.id %}" class="inline">
+                {% csrf_token %}
+                <button class="btn btn-secondary" onclick="return confirm('Исключить участника из проекта?')">Исключить</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Нет преподавателей</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

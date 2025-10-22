@@ -1,16 +1,33 @@
+/* ===== THEME & LEGACY ALIASES ===== */
 :root {
-    --bg: #0b1020;
-    --card: #151a2c;
-    --text: #e7eaf6;
-    --muted: #aab2d7;
-    --pri: #6aa2ff;
-    --pri-2: #3e7bf6;
+    /* ядро темы */
+    --bg: #0f1429;
+    --bg-soft: #151b34;
+    --text: #e7ecff;
+    --muted: #9fb0d9;
+    --brand: #5ea1ff;
+    --brand-2: #3e7bf6;
     --ok: #2ecc71;
     --warn: #f1c40f;
     --err: #e74c3c;
+    --pill: #2a3154;
+    --pill-blue: #29407a;
+    --border: #203054;
+    --shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+
+    /* алиасы для старых правил */
+    --card: var(--bg-soft);
+    --pri: var(--brand);
+    --pri-2: var(--brand-2);
 }
+
+/* ===== BASE ===== */
 * {
     box-sizing: border-box;
+}
+html,
+body {
+    height: 100%;
 }
 body {
     margin: 0;
@@ -25,23 +42,23 @@ body {
     color: var(--text);
 }
 a {
-    color: var(--pri);
+    color: var(--brand);
     text-decoration: none;
 }
 a:hover {
     text-decoration: underline;
 }
-nav {
-    display: flex;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #0e1430;
-    border-bottom: 1px solid #1f2744;
-}
+
 .container {
     max-width: 1080px;
-    margin: 20px auto;
-    padding: 0 16px;
+    margin: 88px auto 64px;
+    padding: 24px 20px;
+}
+.footer {
+    max-width: 1080px;
+    margin: 0 auto 24px;
+    padding: 0 20px;
+    color: var(--muted);
 }
 
 h1,
@@ -49,23 +66,123 @@ h2,
 h3 {
     margin: 16px 0 12px;
 }
-.card {
-    background: var(--card);
-    padding: 16px;
-    border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+/* ===== NAVBAR ===== */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(15, 20, 41, 0.9);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+.navbar__inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 56px;
+}
+.brand {
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--text);
+    text-decoration: none;
+}
+.brand:hover {
+    color: var(--brand);
 }
 
+.nav {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.nav__link {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+.nav__link:hover {
+    color: var(--text);
+    background: var(--bg-soft);
+}
+
+.spacer {
+    flex: 1;
+}
+.userbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.userbox__name {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--muted);
+    font-size: 14px;
+}
+.role-badge {
+    background: var(--pill);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--text);
+}
+
+/* ===== FLASH (сообщения в шапке) ===== */
+.flash {
+    position: sticky;
+    top: 0;
+    display: grid;
+    gap: 8px;
+    padding: 8px 20px;
+}
+.flash__item {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+.flash__item.success {
+    border-color: #227e4e;
+}
+.flash__item.error {
+    border-color: #b04747;
+}
+.flash.is-hidden {
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+/* ===== CARDS & GRID ===== */
+.card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
 .grid {
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
+/* ===== TABLES ===== */
 table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--card);
+    background: var(--bg-soft);
     border-radius: 12px;
     overflow: hidden;
 }
@@ -84,23 +201,45 @@ tbody tr:hover {
     background: #1a2140;
 }
 
+.table-sm {
+    width: 100%;
+    border-collapse: collapse;
+}
+.table-sm th,
+.table-sm td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ===== BUTTONS ===== */
 .btn {
-    display: inline-block;
-    padding: 8px 14px;
-    border-radius: 10px;
-    background: var(--pri);
-    color: #fff;
-    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    color: var(--text);
+    text-decoration: none;
     cursor: pointer;
 }
 .btn:hover {
-    background: var(--pri-2);
-    color: #fff;
-    text-decoration: none;
+    filter: brightness(1.08);
+}
+.btn-ghost {
+    background: transparent;
 }
 .btn-secondary {
     background: #2d3458;
+    color: #fff;
+    border: 0;
 }
+.btn-secondary:hover {
+    filter: brightness(1.08);
+}
+
+/* ===== FORMS ===== */
 .input,
 .textarea,
 select {
@@ -109,12 +248,26 @@ select {
     border-radius: 10px;
     border: 1px solid #2a3154;
     background: #0e1430;
-    color: #e7eaf6;
+    color: #e7ecff;
 }
 .textarea {
     min-height: 110px;
 }
+.field {
+    margin-bottom: 10px;
+}
+.field > label {
+    display: block;
+    margin-bottom: 6px;
+    color: #c8cff1;
+}
+.grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
 
+/* ===== TOAST-LIKE MESSAGES (старый список) ===== */
 .messages {
     list-style: none;
     padding: 0;
@@ -138,6 +291,7 @@ select {
     background: #3a320f;
 }
 
+/* ===== BADGES / STATUS ===== */
 .badge {
     padding: 2px 8px;
     border-radius: 10px;
@@ -156,7 +310,82 @@ select {
     background: #6b2d2d;
 }
 
+/* ===== UTILITIES ===== */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.inline {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
 .scrollbox {
     max-height: 520px;
     overflow: auto;
+}
+.muted {
+    color: var(--muted);
+    font-size: 12px;
+}
+.pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--pill);
+    font-size: 12px;
+}
+.pill-blue {
+    background: var(--pill-blue);
+}
+
+/* ===== TYPEAHEAD (поиск проекта в форме задач) ===== */
+.typeahead {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 92px;
+    background: #101632;
+    border: 1px solid #2a3154;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    max-height: 280px;
+    overflow: auto;
+    display: none;
+    z-index: 40; /* ниже navbar (50) */
+}
+.typeahead .hint {
+    padding: 8px 10px;
+    cursor: pointer;
+}
+.typeahead .hint:hover,
+.typeahead .hint.active {
+    background: #1a2140;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress {
+    background: #1b2347;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 10px;
+}
+.progress__fill {
+    height: 10px;
+    background: #3b82f6;
+}
+
+/* ===== DEFINITION LIST (паспорт проекта) ===== */
+.kv {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+}
+.kv dt {
+    color: var(--muted);
+}
+.kv dd {
+    margin: 0;
 }

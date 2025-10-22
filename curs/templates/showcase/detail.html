@@ -1,8 +1,50 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<h1>{{ project.project_name }}</h1>
-<p><b>Статус:</b> {{ project.project_status }} | <b>Создан:</b> {{ project.created_at|date:'Y-m-d H:i' }} | <b>Релиз:</b> {{ project.release_date|date:'Y-m-d H:i' }}</p>
-<p><b>Специализация:</b> {{ project.specialization }}</p>
-<hr>
-<p>{{ project.project_description|default:'Описание отсутствует' }}</p>
+<h1>
+  {% if request.user.role == 'ADMIN' %}[{{ project.project_id }}] {% endif %}
+  {{ project.project_name }}
+</h1>
+
+<div class="grid" style="gap:12px; align-items:start;">
+  <div class="card">
+    <div class="toolbar" style="justify-content:space-between; margin-bottom:6px;">
+      <div>
+        <span class="pill
+          {% if project.project_status == 'paused' %} pill-blue
+          {% elif project.project_status == 'archived' %} {% endif %}">
+          {{ project.project_status }}
+        </span>
+      </div>
+      <div class="muted">
+        Создан: {{ project.created_at|date:"d.m.Y H:i" }} ·
+        Релиз: {{ project.release_date|date:"d.m.Y H:i" }}
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:0;">
+      <b>Специализация:</b> {{ project.specialization|default:"—" }}
+    </p>
+
+    <h3 style="margin-top:6px;">О проекте</h3>
+    <p>{{ project.project_description|default:"Описание отсутствует"|linebreaksbr }}</p>
+  </div>
+
+  <div class="card" style="min-width:280px; max-width:360px;">
+    <h3 style="margin-top:0;">Паспорт проекта</h3>
+    <dl class="kv">
+      <dt>Статус</dt><dd>{{ project.project_status }}</dd>
+      <dt>Создан</dt><dd>{{ project.created_at|date:"d.m.Y H:i" }}</dd>
+      <dt>Релиз</dt><dd>{{ project.release_date|date:"d.m.Y H:i" }}</dd>
+      <dt>Специализация</dt><dd>{{ project.specialization|default:"—" }}</dd>
+    </dl>
+
+    <div class="toolbar" style="margin-top:8px; flex-wrap:wrap;">
+      {% if request.user.role == 'ADMIN' %}
+        <a class="btn" href="{% url 'projects:project-detail' project.project_id %}">Открыть в проекте</a>
+        <a class="btn btn-secondary" href="{% url 'adminboard:project-members-admin' project.project_id %}">Модерация</a>
+      {% endif %}
+      <a class="btn" href="{% url 'projects:project-team' project.project_id %}">Команда</a>
+    </div>
+  </div>
+</div>
 {% endblock %}

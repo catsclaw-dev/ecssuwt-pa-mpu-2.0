@@ -2,40 +2,51 @@
 {% block content %}
 <h1>Статистика: рейтинг проектов</h1>
 
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Проект</th>
-      <th>Готово</th>
-      <th>Прогресс</th>
-      <th>Последняя активность</th>
-      <th>Статус</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for p in items %}
-    <tr>
-      <td>{{ forloop.counter0|add:1 }}</td>
-      <td>
-        <a href="{% url 'projects:project-detail' p.project_id %}">{{ p.project_name }}</a><br>
-        <small>{{ p.specialization }}</small>
-      </td>
-      <td>{{ p.done|default:0 }} / {{ p.total|default:0 }}</td>
-      <td style="min-width:220px">
-        <div style="background:#eee;border-radius:6px;overflow:hidden;height:10px;">
-          <div style="height:10px;width:{{ p.ratio_pct }}%;"></div>
-        </div>
-        <small>{{ p.ratio_pct }}%</small>
-      </td>
-      <td>{{ p.last_activity|date:"Y-m-d H:i" }}</td>
-      <td>{{ p.project_status }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card scrollbox" style="max-height:520px">
+  <table class="table-sm">
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Проект</th>
+        <th>Готово</th>
+        <th>Прогресс</th>
+        <th>Последняя активность</th>
+        <th>Статус</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in items %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>
+          {% if request.user.role == 'ADMIN' %}<span class="muted">[{{ p.project_id }}]</span> {% endif %}
+          <a href="{% url 'projects:project-detail' p.project_id %}">{{ p.project_name }}</a><br>
+          <small class="muted">{{ p.specialization }}</small>
+        </td>
+        <td>{{ p.done|default:0 }} / {{ p.total|default:0 }}</td>
+        <td style="min-width:220px">
+          <div class="progress" aria-label="Прогресс" role="progressbar"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ p.ratio_pct|default:0 }}">
+            <div class="progress__fill" style="width:{{ p.ratio_pct|default:0 }}%"></div>
+          </div>
+          <small>{{ p.ratio_pct|default:0 }}%</small>
+        </td>
+        <td>{{ p.last_activity|date:"d.m.Y H:i" }}</td>
+        <td>{{ p.project_status }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Пока пусто</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 {% if items|length == page_size %}
-  <p><a href="?page={{ page|add:1 }}">Загрузить ещё</a></p>
+  <div class="pager" style="margin-top:12px;">
+    {% if page|add:-1 > 0 %}
+      <a class="btn btn-secondary" href="?page={{ page|add:-1 }}">← Назад</a>
+    {% endif %}
+    <a class="btn" href="?page={{ page|add:1 }}">Загрузить ещё →</a>
+  </div>
 {% endif %}
 {% endblock %}

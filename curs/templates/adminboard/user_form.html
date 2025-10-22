@@ -3,31 +3,55 @@
 <h1>{% if mode == 'new' %}Новый пользователь{% else %}Редактировать пользователя{% endif %}</h1>
 
 <form method="post" class="card">{% csrf_token %}
-  <label>Логин*<br>
-    <input class="input" name="login" value="{{ user.login }}" required>
-  </label><br>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label>Логин*<br><input class="input" name="login" value="{{ user.login }}" required></label>
+    <label>Роль*<br>
+      <select class="input" name="role" id="role" required>
+        {% for r in roles %}<option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Фамилия*<br><input class="input" name="last_name" value="{{ user.last_name }}" required></label>
+    <label>Имя*<br><input class="input" name="first_name" value="{{ user.first_name }}" required></label>
+    <label>Отчество*<br><input class="input" name="middle_name" value="{{ user.middle_name }}" required></label>
+    <label>Пароль{% if mode == 'edit' %} (оставьте пустым для без изменений){% endif %}*<br>
+      <input class="input" type="password" name="password" {% if mode == 'new' %}required{% endif %}>
+    </label>
+    <label>Телефон*<br><input class="input" name="contact_phone" value="{{ user.contact_phone }}" required></label>
+    <label>E-mail*<br><input class="input" name="contact_email" value="{{ user.contact_email }}" required></label>
+    <label>Telegram<br><input class="input" name="contact_telegram" value="{{ user.contact_telegram }}"></label>
+  </div>
 
-  <label>Роль*<br>
-    <select class="input" name="role" required>
-      {% for r in roles %}
-        <option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r }}</option>
-      {% endfor %}
-    </select>
-  </label><br>
+  <hr>
 
-  <label>Имя*<br>
-    <input class="input" name="first_name" value="{{ user.first_name }}" required>
-  </label><br>
+  <!-- Блок STUDENT -->
+  <div id="role-student" class="role-block">
+    <h3>Данные студента</h3>
+    <label>Группа*<br><input class="input" name="st_group_number" value="{{ user.st_group_number }}"></label>
+    <label>Факультет*<br><input class="input" name="st_faculty" value="{{ user.st_faculty }}"></label>
+  </div>
 
-  <label>Фамилия*<br>
-    <input class="input" name="last_name" value="{{ user.last_name }}" required>
-  </label><br>
+  <!-- Блок PROFESSOR -->
+  <div id="role-professor" class="role-block">
+    <h3>Данные преподавателя</h3>
+    <label>Кафедра*<br><input class="input" name="pr_department" value="{{ user.pr_department }}"></label>
+    <label>Факультет*<br><input class="input" name="pr_faculty" value="{{ user.pr_faculty }}"></label>
+  </div>
 
-  <label>Пароль{% if mode == 'edit' %} (оставьте пустым, чтобы не менять){% endif %}<br>
-    <input class="input" type="password" name="password" {% if mode == 'new' %}required{% endif %}>
-  </label><br>
-
-  <button class="btn">Сохранить</button>
-  <a class="btn btn-secondary" href="{% url 'adminboard:users-list' %}">Отмена</a>
+  <p style="margin-top:12px">
+    <button class="btn">Сохранить</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:users-list' %}">Отмена</a>
+  </p>
 </form>
+
+<script>
+(function(){
+  function toggleRole() {
+    var role = document.getElementById('role').value;
+    document.getElementById('role-student').style.display   = (role === 'STUDENT')   ? '' : 'none';
+    document.getElementById('role-professor').style.display = (role === 'PROFESSOR') ? '' : 'none';
+  }
+  document.getElementById('role').addEventListener('change', toggleRole);
+  toggleRole();
+})();
+</script>
 {% endblock %}

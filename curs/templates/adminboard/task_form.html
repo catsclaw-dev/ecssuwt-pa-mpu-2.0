@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Новая задача</h1>
+
+<form class="card" method="get" style="margin-bottom:12px">
+  <div style="display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:center">
+    <input class="input" name="q" value="{{ q }}" placeholder="ID / название / специализация">
+    <button class="btn">Найти проект</button>
+    {% if sel_pid %}
+      <span class="muted">Выбран проект: {{ sel_pid }}</span>
+    {% endif %}
+  </div>
+
+  <div class="scrollbox" style="margin-top:8px">
+    <table>
+      <thead><tr><th>Выбрать</th><th>ID</th><th>Название</th><th>Спец.</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for p in projs %}
+        <tr>
+          <td>
+            <input type="radio" name="project_id" value="{{ p.project_id }}"
+                   {% if sel_pid|stringformat:'s' == p.project_id|stringformat:'s' %}checked{% endif %}>
+          </td>
+          <td>{{ p.project_id }}</td>
+          <td>{{ p.project_name }}</td>
+          <td>{{ p.specialization }}</td>
+          <td>{{ p.project_status }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Проекты не найдены</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:8px">
+    {% if page > 1 %}
+      <button class="btn btn-secondary" name="page" value="{{ page|add:-1 }}">← Назад</button>
+    {% endif %}
+    {% if has_next %}
+      <button class="btn" name="page" value="{{ page|add:1 }}">Далее →</button>
+    {% endif %}
+    <button class="btn" name="page" value="{{ page }}">Выбрать проект</button>
+  </div>
+</form>
+
+<form method="post" class="card">{% csrf_token %}
+  <input type="hidden" name="project_id" value="{{ sel_pid }}">
+
+  <div class="grid2">
+    <div class="field">
+      <label>Название*</label>
+      <input class="input" name="task_name" required>
+    </div>
+
+    <div class="field">
+      <label>Статус*</label>
+      <select class="input" name="task_status" required>
+        {% for s in statuses %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Дедлайн</label>
+      <input class="input" type="datetime-local" name="task_deadline">
+    </div>
+
+    <div class="field">
+      <label>Исполнитель (студент)</label>
+      <select class="input" name="executor_student" {% if not sel_pid %}disabled{% endif %}>
+        <option value="">— не назначать —</option>
+        {% for sid, fio in students %}
+          <option value="{{ sid }}">{{ fio }}</option>
+        {% endfor %}
+      </select>
+      {% if not sel_pid %}
+        <small class="muted">Сначала выберите проект в форме выше и нажмите «Выбрать проект».</small>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Описание</label>
+    <textarea class="textarea" name="task_description"></textarea>
+  </div>
+
+  <p style="margin-top:12px">
+    <button class="btn" {% if not sel_pid %}disabled{% endif %}>Сохранить</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:tasks-list' %}">Отмена</a>
+  </p>
+</form>
+{% endblock %}

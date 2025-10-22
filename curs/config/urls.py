@@ -25,9 +25,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", RootRedirect.as_view(), name="root"),
     path("", include("apps.accounts.urls")),
-    path("projects/", include("apps.projects.urls")),
     path("tasks/", include("apps.tasks.urls")),
     path("reports/", include("apps.reports.urls")),
+    path("projects/", include("apps.projects.urls")),
     path(
         "analytics/",
         include(("apps.analytics.urls", "analytics"), namespace="analytics"),
@@ -40,3 +40,5 @@ urlpatterns = [
         include(("apps.adminboard.urls", "adminboard"), namespace="adminboard"),
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler403 = "config.views.error_403"

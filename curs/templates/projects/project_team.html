@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>
+  {% if request.user.role == 'ADMIN' %}[{{ project.project_id }}] {% endif %}
+  Команда проекта: {{ project.project_name }}
+</h1>
+
+<div class="card scrollbox" style="max-height:500px;">
+  <table class="table-sm">
+    <thead>
+      <tr>
+        <th>Тип</th>
+        <th>ФИО</th>
+        <th>Роль в команде</th>
+        <th>В проекте с</th>
+        <th>Дополнительно</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+        <tr>
+          <td>
+            {% if m.kind == 'student' %}
+              <span class="pill">Студент</span>
+            {% else %}
+              <span class="pill pill-blue">Преподаватель</span>
+            {% endif %}
+          </td>
+          <td>{{ m.fio }}</td>
+          <td>{{ m.role_in_team|default:"—" }}</td>
+          <td>{{ m.joined_at|date:"d.m.Y" }}</td>
+          <td>{{ m.extra }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">В проекте пока нет участников</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

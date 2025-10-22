@@ -1,80 +1,101 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>{{ project.project_name }}</h1>
+<h1>
+  {% if request.user.role == 'ADMIN' %}[{{ project.project_id }}] {% endif %}
+  {{ project.project_name }}
+</h1>
+
 <p>
   <b>Статус:</b> {{ project.project_status }} |
-  <b>Создан:</b> {{ project.created_at|date:"Y-m-d H:i" }} |
-  <b>Релиз:</b> {{ project.release_date|date:"Y-m-d H:i" }} |
+  <b>Создан:</b> {{ project.created_at|date:"d.m.Y H:i" }} |
+  <b>Релиз:</b> {{ project.release_date|date:"d.m.Y H:i" }} |
   <b>Специализация:</b> {{ project.specialization }}
 </p>
+
 <p>{{ project.project_description|default:"Описание отсутствует" }}</p>
 
 <h3>Команда</h3>
-<ul>
-  {% for m in members %}
-    <li>[{{ m.kind }}] {{ m.fio }} {% if m.role_in_team %}— {{ m.role_in_team }}{% endif %}</li>
-  {% empty %}
-    <li>Участники не указаны</li>
-  {% endfor %}
-</ul>
+<p class="toolbar">
+  <a class="btn" href="{% url 'projects:project-team' project.project_id %}">Команда</a>
+  {% if request.user.role == 'ADMIN' %}
+    <a class="btn btn-secondary" href="{% url 'adminboard:project-members-admin' project.project_id %}">Модерация участников</a>
+  {% endif %}
+</p>
 
 <h3>Прогресс</h3>
-<p>Выполнено задач: {{ progress.done }} из {{ progress.total }} ({{ progress.ratio|floatformat:2 }})</p>
+<p>
+  Выполнено задач: {{ progress.done }} из {{ progress.total }}
+  ({{ progress.ratio|floatformat:2 }})
+</p>
 
 <h3>Расписание</h3>
 {% if schedule and schedule|length %}
-  <ul>
-    {% for ev in schedule %}
-      <li>{{ ev.starts_at|date:"Y-m-d H:i" }}–{{ ev.ends_at|date:"H:i" }} — {{ ev.title }}{% if ev.location %} ({{ ev.location }}){% endif %}</li>
-    {% endfor %}
-  </ul>
+  <div class="card scrollbox" style="max-height:320px">
+    <ul>
+      {% for ev in schedule %}
+        <li>
+          {{ ev.starts_at|date:"d.m.Y H:i" }}–{{ ev.ends_at|date:"H:i" }}
+          — {{ ev.title }}{% if ev.location %} ({{ ev.location }}){% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 {% else %}
   <p>Пока нет событий.</p>
 {% endif %}
 
+{# Задачи: ID задачи показываем ТОЛЬКО админу. #}
 <h3>Задачи</h3>
 {% if request.user.role == 'PROFESSOR' or request.user.role == 'ADMIN' %}
-  <p>
+  <p class="toolbar">
     <a class="btn" href="{% url 'projects:task-new' project.project_id %}">+ Новая задача</a>
     <a class="btn" href="{% url 'projects:schedule-new' project.project_id %}">+ Событие расписания</a>
+    {% if request.user.role == 'ADMIN' %}
+      <a class="btn btn-secondary" href="{% url 'adminboard:project-members-admin' project.project_id %}">Модерация участников</a>
+    {% endif %}
   </p>
 {% endif %}
-<div class="tasks">
-  {% for t in tasks %}
-    <div class="task">
-      <div class="head">
-        <b>#{{ t.task_id }}</b> {{ t.task_name }} —
-        <span class="badge badge-{{ t.ui_status }}">{{ t.ui_status }}</span>
-        {% if t.task_deadline %}<small>(дедлайн {{ t.task_deadline|date:"Y-m-d H:i" }})</small>{% endif %}
-      </div>
-      <div class="desc">{{ t.task_description }}</div>
 
-      {% if request.user.role == 'STUDENT' %}
-        <details><summary>Сдать отчёт</summary>
-          <!-- endpoints появятся в STEP 3 -->
-          <form method="post" enctype="multipart/form-data" action="{% url 'reports:submit' t.task_id %}">
-            {% csrf_token %}
-            <label>Файл <input type="file" name="file"></label>
-            <span>или</span>
-            <label>Ссылка <input type="url" name="external_url" placeholder="https://..."></label>
-            <button type="submit">Отправить</button>
-          </form>
-        </details>
-      {% elif request.user.role == 'PROFESSOR' %}
-        <details><summary>Проверить</summary>
-          <!-- endpoints появятся в STEP 3 -->
-          <form method="post" action="{% url 'reports:moderate' t.task_id %}">
-            {% csrf_token %}
-            <textarea name="comment" placeholder="Комментарий при возврате обязателен"></textarea>
-            <button name="action" value="approve" type="submit">Принять</button>
-            <button name="action" value="needs_fix" type="submit">Вернуть</button>
-          </form>
-          <div class="notes"><em>Последний отчёт: {{ t.last_report_status|default:"—" }}</em></div>
-        </details>
-      {% endif %}
-    </div>
-  {% empty %}
-    <p>Задач нет.</p>
-  {% endfor %}
+<div class="card scrollbox" style="max-height:520px">
+  <div class="tasks">
+    {% for t in tasks %}
+      <div class="task">
+        <div class="head">
+          {% if request.user.role == 'ADMIN' %}<b>#{{ t.task_id }}</b> {% endif %}
+          {{ t.task_name }} —
+          <span class="badge badge-{{ t.ui_status }}">{{ t.ui_status }}</span>
+          {% if t.task_deadline %}
+            <small>(дедлайн {{ t.task_deadline|date:"d.m.Y H:i" }})</small>
+          {% endif %}
+        </div>
+
+        <div class="desc">{{ t.task_description }}</div>
+
+        {% if request.user.role == 'STUDENT' %}
+          <details><summary>Сдать отчёт</summary>
+            <form method="post" enctype="multipart/form-data" action="{% url 'reports:submit' t.task_id %}">
+              {% csrf_token %}
+              <label>Файл <input type="file" name="file"></label>
+              <span>или</span>
+              <label>Ссылка <input type="url" name="external_url" placeholder="https://..."></label>
+              <button type="submit">Отправить</button>
+            </form>
+          </details>
+        {% elif request.user.role == 'PROFESSOR' %}
+          <details><summary>Проверить</summary>
+            <form method="post" action="{% url 'reports:moderate' t.task_id %}">
+              {% csrf_token %}
+              <textarea name="comment" placeholder="Комментарий при возврате обязателен"></textarea>
+              <button name="action" value="approve" type="submit">Принять</button>
+              <button name="action" value="needs_fix" type="submit">Вернуть</button>
+            </form>
+            <div class="notes"><em>Последний отчёт: {{ t.last_report_status|default:"—" }}</em></div>
+          </details>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>Задач нет.</p>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

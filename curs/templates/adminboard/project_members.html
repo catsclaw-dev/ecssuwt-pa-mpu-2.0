@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Участники проекта: [{{ project.project_id }}] {{ project.project_name }}</h1>
+<p><a class="btn btn-secondary" href="{% url 'adminboard:projects-list' %}">← к проектам</a></p>
+
+<div class="grid" style="gap:12px">
+  <div class="card">
+    <h3>Текущие студенты</h3>
+    <table>
+      <thead><tr><th>ФИО</th><th>Группа</th><th>Роль</th><th>С</th><th>По</th><th></th></tr></thead>
+      <tbody>
+      {% for m in students %}
+        <tr>
+          <td>{{ m.fio }}</td>
+          <td>{{ m.group_number }}</td>
+          <td>
+            <form method="post" action="{% url 'adminboard:member-update' m.id %}" style="display:flex;gap:6px;align-items:center">{% csrf_token %}
+              <input class="input" name="role_in_team" value="{{ m.role_in_team }}" style="max-width:180px">
+          </td>
+          <td>{{ m.joined_at|date:"Y-m-d" }}</td>
+          <td><input class="input" type="datetime-local" name="left_at" value="{{ m.left_at|date:'Y-m-d\\TH:i' }}"></td>
+          <td style="white-space:nowrap">
+              <button class="btn">Сохранить</button>
+            </form>
+            <form method="post" action="{% url 'adminboard:member-remove' m.id %}" style="display:inline">{% csrf_token %}
+              <button class="btn btn-secondary" onclick="return confirm('Удалить участника?')">Удал.</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="6">Нет студентов</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Текущие преподаватели</h3>
+    <table>
+      <thead><tr><th>ФИО</th><th>Кафедра</th><th>Роль</th><th>С</th><th>По</th><th></th></tr></thead>
+      <tbody>
+      {% for m in profs %}
+        <tr>
+          <td>{{ m.fio }}</td>
+          <td>{{ m.department }}</td>
+          <td>
+            <form method="post" action="{% url 'adminboard:member-update' m.id %}" style="display:flex;gap:6px;align-items:center">{% csrf_token %}
+              <input class="input" name="role_in_team" value="{{ m.role_in_team }}" style="max-width:180px">
+          </td>
+          <td>{{ m.joined_at|date:"Y-m-d" }}</td>
+          <td><input class="input" type="datetime-local" name="left_at" value="{{ m.left_at|date:'Y-m-d\\TH:i' }}"></td>
+          <td style="white-space:nowrap">
+              <button class="btn">Сохранить</button>
+            </form>
+            <form method="post" action="{% url 'adminboard:member-remove' m.id %}" style="display:inline">{% csrf_token %}
+              <button class="btn btn-secondary" onclick="return confirm('Удалить участника?')">Удал.</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="6">Нет преподавателей</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <h2>Добавить участника</h2>
+  <form method="get" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <input type="hidden" name="page" value="1">
+    <label><input type="radio" name="sr" value="student" {% if sr == 'student' %}checked{% endif %}> Студента</label>
+    <label><input type="radio" name="sr" value="professor" {% if sr == 'professor' %}checked{% endif %}> Преподавателя</label>
+    <input class="input" name="q" value="{{ q }}" placeholder="ФИО/логин/группа/кафедра">
+    <button class="btn">Искать</button>
+  </form>
+
+  <div class="scrollbox" style="margin-top:8px">
+    <table>
+      <thead><tr><th>Кандидаты</th><th></th></tr></thead>
+      <tbody>
+      {% for c in candidates %}
+        <tr>
+          <td>{{ c.label }}</td>
+          <td style="white-space:nowrap">
+            <form method="post" action="{% url 'adminboard:member-add' project.project_id %}" style="display:inline">{% csrf_token %}
+              <input type="hidden" name="kind" value="{{ sr }}">
+              <input type="hidden" name="person_id" value="{{ c.id }}">
+              <input class="input" name="role_in_team" placeholder="Роль в команде" style="max-width:180px">
+              <button class="btn">Добавить</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="2">Никого не найдено</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:8px">
+    {% if page > 1 %}
+      <a class="btn btn-secondary" href="?sr={{ sr }}&q={{ q }}&page={{ page|add:-1 }}">← Назад</a>
+    {% endif %}
+    {% if has_next %}
+      <a class="btn" href="?sr={{ sr }}&q={{ q }}&page={{ page|add:1 }}">Далее →</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

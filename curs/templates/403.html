@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title|default:"Нет доступа" }}</h1>
+<p>{{ message|default:"Недостаточно прав для просмотра этой страницы." }}</p>
+<p><a class="btn" href="javascript:history.back()">← Назад</a></p>
+{% endblock %}

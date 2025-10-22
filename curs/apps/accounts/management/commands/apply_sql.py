@@ -18,6 +18,7 @@ SQL_ORDER = [
     "11_new_dls.sql",
     "12_create_dls.sql",
     "13_admin_dls.sql",
+    "14_members_edit_dls.sql",
 ]
 
 

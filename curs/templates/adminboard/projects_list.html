@@ -1,15 +1,17 @@
 {% extends "base.html" %}{% block content %}
 <h1>Проекты</h1>
-<form method="get" class="card">
+<form method="get" class="card" style="display:grid;grid-template-columns:1fr 200px auto;gap:8px;align-items:center;">
   <input class="input" name="q" value="{{ q }}" placeholder="название/специализация">
   <select class="input" name="status">
     <option value="">— все —</option>
     {% for s in statuses %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
-  <button class="btn">Фильтр</button>
-  <a class="btn btn-secondary" href="{% url 'adminboard:project-new' %}">+ Новый</a>
+  <div>
+    <button class="btn">Фильтр</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:project-new' %}">+ Новый</a>
+  </div>
 </form>
 
 <div class="card scrollbox">
@@ -21,15 +23,18 @@
       <td>{{ p.project_id }}</td>
       <td><a href="{% url 'projects:project-detail' p.project_id %}">{{ p.project_name }}</a></td>
       <td>{{ p.project_status }}</td>
-      <td>{{ p.release_date|date:"Y-m-d" }}</td>
+      <td>{{ p.release_date|date:"Y-m-d H:i" }}</td>
       <td>{{ p.specialization }}</td>
-      <td>
+      <td style="white-space:nowrap">
         <a class="btn" href="{% url 'adminboard:project-edit' p.project_id %}">Изм.</a>
         <form method="post" action="{% url 'adminboard:project-delete' p.project_id %}" style="display:inline">{% csrf_token %}
-          <button class="btn btn-secondary" onclick="return confirm('Удалить проект? Будут удалены задачи/отчёты.')">Удал.</button>
+          <button class="btn btn-secondary" onclick="return confirm('Удалить проект?')">Удал.</button>
         </form>
+        <a class="btn" href="{% url 'adminboard:project-members-admin' p.project_id %}">Участники</a>
       </td>
     </tr>
+  {% empty %}
+    <tr><td colspan="6">Ничего не найдено</td></tr>
   {% endfor %}
   </tbody>
 </table>

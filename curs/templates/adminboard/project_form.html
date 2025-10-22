@@ -1,18 +1,38 @@
-{% extends "base.html" %}{% block content %}
-<h1>{% if mode=='new' %}Новый проект{% else %}Редактировать проект{% endif %}</h1>
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if mode == 'new' %}Новый проект{% else %}Редактировать проект{% endif %}</h1>
+
 <form method="post" class="card">{% csrf_token %}
-  <label>Название*<input class="input" name="project_name" value="{{ project.project_name }}"></label><br>
-  <label>Статус
-    <select class="input" name="project_status">
-      {% for s in "active,paused,archived".split(",") %}
-        <option value="{{ s }}" {% if project.project_status==s %}selected{% endif %}>{{ s }}</option>
-      {% endfor %}
-    </select>
-  </label><br>
-  <label>Релиз<input class="input" type="datetime-local" name="release_date" value="{{ project.release_date|date:'Y-m-d\\TH:i' }}"></label><br>
-  <label>Специализация<input class="input" name="specialization" value="{{ project.specialization }}"></label><br>
-  <label>Описание<textarea class="textarea" name="project_description">{{ project.project_description }}</textarea></label><br>
-  <button class="btn">Сохранить</button>
-  <a class="btn btn-secondary" href="{% url 'adminboard:projects-list' %}">Отмена</a>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label>Название*<br>
+      <input class="input" name="project_name" value="{{ project.project_name }}" required>
+    </label>
+
+    <label>Статус*<br>
+      <select class="input" name="project_status" required>
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if project.project_status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Релиз*<br>
+      <input class="input" type="datetime-local" name="release_date"
+             value="{{ project.release_date|date:'Y-m-d\\TH:i' }}" required>
+    </label>
+
+    <label>Специализация*<br>
+      <input class="input" name="specialization" value="{{ project.specialization }}" required>
+    </label>
+  </div>
+
+  <label>Описание*<br>
+    <textarea class="textarea" name="project_description" required>{{ project.project_description }}</textarea>
+  </label>
+
+  <p style="margin-top:12px">
+    <button class="btn">Сохранить</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:projects-list' %}">Отмена</a>
+  </p>
 </form>
 {% endblock %}
