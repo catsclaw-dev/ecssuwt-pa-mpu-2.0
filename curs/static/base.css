@@ -389,3 +389,38 @@ select {
 .kv dd {
     margin: 0;
 }
+
+/* Подсветка валидности */
+.input:required:invalid {
+    border-color: #e00;
+}
+.input:valid {
+    border-color: #0a0;
+}
+.hint {
+    display: none;
+    font-size: 0.9em;
+    color: #666;
+}
+.input:invalid + .hint {
+    display: block;
+    color: #e00;
+}
+
+/* CSS-переключение блоков ролей без JS (нужна поддержка :has) */
+.role-block {
+    display: none;
+}
+form:has(#role option:checked[value="STUDENT"]) #role-student {
+    display: block;
+}
+form:has(#role option:checked[value="PROFESSOR"]) #role-professor {
+    display: block;
+}
+
+/* Фолбэк: если :has нет — покажем оба, чтобы юзер мог заполнить нужное */
+@supports not selector(form:has(#role)) {
+    .role-block {
+        display: block;
+    }
+}
