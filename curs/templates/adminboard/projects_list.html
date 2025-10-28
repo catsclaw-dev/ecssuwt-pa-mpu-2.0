@@ -55,10 +55,6 @@
           </form>
         {% else %}
           <form method="post" action="{% url 'adminboard:project-unarchive' p.project_id %}" style="display:inline">{% csrf_token %}
-            <select name="to_status" class="input" style="width:auto;display:inline-block;vertical-align:middle;">
-              <option value="active">active</option>
-              <option value="paused">paused</option>
-            </select>
             <button class="btn" title="Разархивировать">↩</button>
           </form>
         {% endif %}

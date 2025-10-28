@@ -81,6 +81,41 @@ def _is_member(user, project_id):
         return cur.fetchone() is not None
 
 
+def _student_choices_for_project(project_id: int):
+    """
+    Вернёт список пар [(student_id, 'Фам Имя Отч')], только активные участники проекта.
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT s.student_id,
+                   u.last_name || ' ' || u.first_name || COALESCE(' '||u.middle_name,'') AS fio
+            FROM project_members m
+            JOIN students s ON s.student_id = m.member_student
+            JOIN users    u ON u.user_id    = s.user_id
+            WHERE m.project_id = %s
+              AND m.member_student IS NOT NULL
+              AND m.left_at IS NULL
+            ORDER BY fio
+            """,
+            [project_id],
+        )
+        return cur.fetchall()  # [(id, fio)]
+
+
+def _project_is_archived(project_id: int) -> bool:
+    """
+    Истина, если проект в архиве (по archived_at или статусу 'archived').
+    """
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT (archived_at IS NOT NULL) OR (project_status = 'archived') FROM projects WHERE project_id=%s",
+            [project_id],
+        )
+        row = cur.fetchone()
+        return bool(row and row[0])
+
+
 class MyProjectsView(LoginRequiredMixin, TemplateView):
     template_name = "projects/my_projects.html"
 
@@ -117,6 +152,7 @@ class ProjectDetailView(ProjectAccessMixin, LoginRequiredMixin, TemplateView):
 @login_required
 @require_http_methods(["GET", "POST"])
 def task_new(request, project_id: int):
+    # Доступ: ADMIN всегда; PROFESSOR — только если состоит в проекте
     if request.user.role not in ("PROFESSOR", "ADMIN"):
         return HttpResponseForbidden("Недостаточно прав")
 
@@ -127,15 +163,37 @@ def task_new(request, project_id: int):
         if not pid or not _is_prof_member_of_project(pid, project_id):
             return HttpResponseForbidden("Вы не прикреплены к проекту")
 
+    # Нельзя создавать задачи в архивном проекте
+    if _project_is_archived(project_id):
+        messages.error(request, "Проект в архиве — создавать задачи нельзя.")
+        return redirect("projects:project-detail", project_id=project_id)
+
     if request.method == "POST":
         name = (request.POST.get("task_name") or "").strip()
         description = (request.POST.get("task_description") or "").strip() or None
-        exec_sid = request.POST.get("executor_student") or None
+        exec_sid = (request.POST.get("executor_student") or "").strip() or None
         deadline = request.POST.get("task_deadline") or None
 
         if not name:
             messages.error(request, "Название обязательно")
         else:
+            # Если указан исполнитель — проверим, что он в составе проекта (и не вышел)
+            if exec_sid:
+                with connection.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM project_members
+                        WHERE project_id=%s AND member_student=%s AND left_at IS NULL
+                        """,
+                        [project_id, exec_sid],
+                    )
+                    if cur.fetchone() is None:
+                        messages.error(
+                            request, "Указанный студент не состоит в проекте."
+                        )
+                        return redirect("projects:task-new", project_id=project_id)
+
             try:
                 with connection.cursor() as cur:
                     cur.execute(
@@ -145,12 +203,11 @@ def task_new(request, project_id: int):
                         VALUES
                           (%s, %s, %s, %s, 'open', %s)
                         """,
-                        [project_id, name, description, exec_sid, deadline],
+                        [project_id, name, description, exec_sid or None, deadline],
                     )
                 messages.success(request, "Задача создана")
                 return redirect("projects:project-detail", project_id=project_id)
             except Exception as e:
-                # покажем реальную причину, если что-то не так (например, формат даты)
                 messages.error(request, f"Ошибка создания задачи: {e}")
 
     students = _student_choices_for_project(project_id)
