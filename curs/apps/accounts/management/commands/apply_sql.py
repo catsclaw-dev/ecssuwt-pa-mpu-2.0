@@ -23,7 +23,6 @@ SQL_ORDER = [
     "21_func.sql",
     "22_roles_seed.sql",
     "23_seed.sql",
-    "24_extra_trg.sql",
 ]
 
 
