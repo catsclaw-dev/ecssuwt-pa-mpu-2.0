@@ -73,14 +73,10 @@ def _project_id_by_task(task_id: int) -> int:
 def _insert_log(
     action: str, actor_user_id: int | None, admin_id: int | None, details: dict
 ):
-    """
-    Пишем событие в admin_logs. Если расширенные колонки ещё не добавлены—
-    тихо даунгрейдимся к минимальной схеме (admin_id, admin_action, log_created_at).
-    """
+    """Безопасное логирование: при любых ошибках прав/схемы просто выходим."""
     details_json = json.dumps(details, ensure_ascii=False)
-    with connection.cursor() as cur:
-        try:
-            # расширенная схема (см. SQL ниже)
+    try:
+        with connection.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO admin_logs (admin_id, admin_action, log_created_at, actor_user_id, details)
@@ -88,15 +84,14 @@ def _insert_log(
                 """,
                 [admin_id, action, actor_user_id, details_json],
             )
+    except Exception as e:
+        # Сбросим соединение из "ошибочного" состояния и не мешаем основному сценарию
+        try:
+            connection.rollback()
         except Exception:
-            # минимальная схема
-            cur.execute(
-                """
-                INSERT INTO admin_logs (admin_id, admin_action, log_created_at)
-                VALUES (%s, %s, now())
-                """,
-                [admin_id, action],
-            )
+            pass
+        # Если хочешь, можно залогировать в stdout: print(f"admin_log skipped: {e}")
+        return
 
 
 # --- endpoints -------------------------------------------------------------
@@ -105,27 +100,47 @@ def _insert_log(
 @require_POST
 @login_required
 def submit_report(request, task_id: int):
-    # только студент
+    # Только студент может сдавать отчёт
     if getattr(request.user, "role", None) != "STUDENT":
         return HttpResponseForbidden("Только студент может сдавать отчёт")
 
-    sid = _get_student_id_by_user(
-        getattr(request.user, "user_id", None) or request.user.pk
-    )
+    # Текущий студент
+    user_pk = getattr(request.user, "user_id", None) or request.user.pk
+    sid = _get_student_id_by_user(user_pk)
     if not sid:
         raise Http404("Студент не найден")
 
+    # Задача и назначенный исполнитель
     project_id, executor_sid = _task_core(task_id)
     if not project_id:
         raise Http404("Задача не найдена")
 
-    # правило: если в задаче назначен исполнитель — сдаёт только он,
-    # иначе — любой студент-участник проекта
+    # Запрещаем сдачу по архивной задаче/проекту
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM tasks t
+            JOIN projects p ON p.project_id = t.project_id
+            WHERE t.task_id=%s
+              AND COALESCE(t.archived_at, p.archived_at) IS NULL
+            LIMIT 1
+        """,
+            [task_id],
+        )
+        if not cur.fetchone():
+            messages.error(
+                request, "Задача или проект в архиве — сдача отчёта недоступна."
+            )
+            return redirect("projects:project-detail", project_id=project_id)
+
+    # Право сдачи: если исполнитель назначен — только он; иначе — любой студент-участник проекта
     if executor_sid and executor_sid != sid:
         return HttpResponseForbidden("Вы не исполнитель этой задачи")
     if not executor_sid and not _student_on_project(sid, project_id):
         return HttpResponseForbidden("Вы не являетесь участником проекта")
 
+    # Данные формы: файл ИЛИ ссылка (строго одно из двух)
     file = request.FILES.get("file")
     external_url = (request.POST.get("external_url") or "").strip() or None
 
@@ -136,6 +151,7 @@ def submit_report(request, task_id: int):
         messages.error(request, "Либо файл, либо ссылка — не оба сразу")
         return redirect("projects:project-detail", project_id=project_id)
 
+    # Валидация и сохранение файла (если есть)
     stored_path = None
     if file:
         if file.size > MAX_UPLOAD:
@@ -145,32 +161,52 @@ def submit_report(request, task_id: int):
         if ext not in ALLOWED_EXT:
             messages.error(request, f"Недопустимое расширение: .{ext}")
             return redirect("projects:project-detail", project_id=project_id)
+
         stored_path = f"uploads/reports/{uuid4()}.{ext}"
+        # сохраняем потоково (как у тебя было)
         with default_storage.open(stored_path, "wb+") as dst:
             for chunk in file.chunks():
                 dst.write(chunk)
 
-    with connection.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO reports (task_id, student_id, file_path, external_url, status, submitted_at)
-            VALUES (%s, %s, %s, %s, 'submitted', now())
-            """,
-            [task_id, sid, stored_path, external_url],
-        )
+    # Пишем отчёт в БД
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO reports (task_id, student_id, file_path, external_url, status, submitted_at)
+                VALUES (%s, %s, %s, %s, 'submitted', now())
+                """,
+                [task_id, sid, stored_path, external_url],
+            )
+    except DatabaseError as e:
+        # Наиболее частый случай при SET ROLE — нет прав на таблицу/sequence
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        messages.error(request, f"Не смог сохранить отчёт: {e}")
+        return redirect("projects:project-detail", project_id=project_id)
 
-    _insert_log(
-        action="REPORT_SUBMIT",
-        actor_user_id=getattr(request.user, "user_id", None) or request.user.pk,
-        admin_id=None,
-        details={
-            "task_id": task_id,
-            "project_id": project_id,
-            "student_id": sid,
-            "file_path": stored_path,
-            "external_url": external_url,
-        },
-    )
+    # Логирование: не должно мешать основному сценарию, поэтому «тихо»
+    try:
+        _insert_log(
+            action="REPORT_SUBMIT",
+            actor_user_id=user_pk,
+            admin_id=None,
+            details={
+                "task_id": task_id,
+                "project_id": project_id,
+                "student_id": sid,
+                "file_path": stored_path,
+                "external_url": external_url,
+            },
+        )
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        # пропускаем лог при любой ошибке прав/схемы
 
     messages.success(request, "Отчёт отправлен")
     return redirect("projects:project-detail", project_id=project_id)

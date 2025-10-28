@@ -1,13 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Новый проект</h1>
-<form method="post">
+
+<form method="post" class="card">
   {% csrf_token %}
-  <label>Название*<br><input name="project_name" class="input" required></label><br>
-  <label>Специализация<br><input name="specialization" class="input"></label><br>
-  <label>Релиз<br><input type="datetime-local" name="release_date" class="input"></label><br>
-  <label>Описание<br><textarea name="project_description" class="textarea"></textarea></label><br>
-  <button class="btn">Создать</button>
-  <a class="btn btn-secondary" href="{% url 'adminboard:index' %}">Отмена</a>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+    <label>
+      Название*
+      <br>
+      <input name="project_name"
+             class="input"
+             required
+             minlength="3" maxlength="120"
+             placeholder="Короткое имя проекта">
+      <span class="hint">От 3 до 120 символов</span>
+    </label>
+
+    <label>
+      Статус*
+      <br>
+      <select name="project_status" class="input" required>
+        {% for s in statuses %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <span class="hint">Выберите статус: active/paused/archived</span>
+    </label>
+
+    <label>
+      Специализация*
+      <br>
+      <input name="specialization"
+             class="input"
+             required
+             minlength="2" maxlength="100"
+             placeholder="Направление/тема">
+      <span class="hint">Обязательное поле (2–100 символов)</span>
+    </label>
+
+    <label>
+      Релиз*
+      <br>
+      <input type="datetime-local"
+             name="release_date"
+             class="input"
+             required>
+      <span class="hint">Укажите дату и время релиза</span>
+    </label>
+  </div>
+
+  <div class="field" style="margin-top:8px">
+    <label>
+      Описание*
+      <br>
+      <textarea name="project_description"
+                class="textarea"
+                required
+                minlength="10" maxlength="4000"
+                placeholder="Краткая аннотация, цель проекта, ожидаемые результаты"></textarea>
+      <span class="hint">От 10 до 4000 символов</span>
+    </label>
+  </div>
+
+  <p style="margin-top:12px">
+    <button class="btn">Создать</button>
+    <a class="btn btn-secondary" href="{% url 'adminboard:index' %}">Отмена</a>
+  </p>
 </form>
 {% endblock %}

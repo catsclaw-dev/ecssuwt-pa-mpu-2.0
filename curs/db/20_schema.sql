@@ -1,4 +1,3 @@
--- Базовые типы (из твоего ядра)
 CREATE EXTENSION IF NOT EXISTS citext;
 
 DO $$ BEGIN
@@ -17,9 +16,7 @@ DO $$ BEGIN
   CREATE TYPE application_status AS ENUM ('pending','approved','rejected');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- =========================
--- USERS & ROLE PROFILES
--- =========================
+-- USERS AND ROLES
 CREATE TABLE IF NOT EXISTS users (
   user_id         BIGSERIAL PRIMARY KEY,
   first_name      VARCHAR(50) NOT NULL,
@@ -58,9 +55,7 @@ CREATE TABLE IF NOT EXISTS admins (
   -- архивация админов обычно делается через users.archived_at
 );
 
--- =========================
 -- ADMIN LOGS
--- =========================
 CREATE TABLE IF NOT EXISTS admin_logs (
   admin_log_id    BIGSERIAL PRIMARY KEY,
   admin_id        BIGINT REFERENCES admins(admin_id) ON DELETE SET NULL,
@@ -70,9 +65,7 @@ CREATE TABLE IF NOT EXISTS admin_logs (
   details         JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
--- =========================
 -- APPLICATIONS
--- =========================
 CREATE TABLE IF NOT EXISTS application_details (
   ap_info_id               BIGSERIAL PRIMARY KEY,
   how_discovered           TEXT,
@@ -104,9 +97,7 @@ CREATE TABLE IF NOT EXISTS project_applications (
   is_archived    BOOLEAN GENERATED ALWAYS AS (archived_at IS NOT NULL) STORED
 );
 
--- =========================
--- PROJECTS & MEMBERS
--- =========================
+-- PROJECTS AND MEMBERS
 CREATE TABLE IF NOT EXISTS projects (
   project_id          BIGSERIAL PRIMARY KEY,
   project_name        VARCHAR(150) NOT NULL,
@@ -134,8 +125,6 @@ CREATE TABLE IF NOT EXISTS project_members (
     CHECK ((member_student IS NOT NULL) <> (member_prof IS NOT NULL))
 );
 
--- Уникальность участника в проекте (без дублей):
--- отдельные частичные ограничения (позволяют NULL во второй колонке)
 CREATE UNIQUE INDEX IF NOT EXISTS unique_index_project_member_student
   ON project_members(project_id, member_student)
   WHERE member_student IS NOT NULL;
@@ -144,9 +133,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS unique_index_project_member_prof
   ON project_members(project_id, member_prof)
   WHERE member_prof IS NOT NULL;
 
--- =========================
 -- TASKS & REPORTS
--- =========================
 CREATE TABLE IF NOT EXISTS tasks (
   task_id          BIGSERIAL PRIMARY KEY,
   project_id       BIGINT NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
@@ -178,9 +165,7 @@ CREATE TABLE IF NOT EXISTS reports (
     CHECK (status <> 'needs_fix' OR review_comment IS NOT NULL)
 );
 
--- =========================
--- OPTIONAL: PROJECT SCHEDULE
--- =========================
+-- PROJECT SCHEDULE
 CREATE TABLE IF NOT EXISTS project_schedule (
   schedule_id BIGSERIAL PRIMARY KEY,
   project_id  BIGINT NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
@@ -195,9 +180,7 @@ CREATE TABLE IF NOT EXISTS project_schedule (
   CONSTRAINT project_schedule_time_chk CHECK (ends_at > starts_at)
 );
 
--- =========================
--- ИНДЕКСЫ (ключевые; без триггеров)
--- =========================
+-- ИНДЕКСЫ
 CREATE INDEX IF NOT EXISTS idx_tasks_project          ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_reports_task           ON reports(task_id);
 CREATE INDEX IF NOT EXISTS idx_reports_student        ON reports(student_id);
@@ -205,7 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_status        ON projects(project_status
 CREATE INDEX IF NOT EXISTS idx_project_schedule_proj   ON project_schedule(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_schedule_start  ON project_schedule(starts_at);
 
--- Логи (поиск по действию/времени/деталям)
+-- Логи
 CREATE INDEX IF NOT EXISTS idx_admin_logs_action   ON admin_logs (admin_action);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_created  ON admin_logs (log_created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_details  ON admin_logs USING GIN (details);

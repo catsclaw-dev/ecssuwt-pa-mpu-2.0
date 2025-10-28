@@ -1,12 +1,19 @@
-{% extends "base.html" %}{% block content %}
+{% extends "base.html" %}
+{% block content %}
 <h1>Проекты</h1>
-<form method="get" class="card" style="display:grid;grid-template-columns:1fr 200px auto;gap:8px;align-items:center;">
+
+<form method="get" class="card" style="display:grid;grid-template-columns:1fr 200px 180px auto;gap:8px;align-items:center;">
   <input class="input" name="q" value="{{ q }}" placeholder="название/специализация">
   <select class="input" name="status">
-    <option value="">— все —</option>
+    <option value="">— все статусы —</option>
     {% for s in statuses %}
       <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
+  </select>
+  <select class="input" name="show">
+    <option value="all" {% if show == 'all' %}selected{% endif %}>Все</option>
+    <option value="active" {% if show == 'active' %}selected{% endif %}>Только активные</option>
+    <option value="archived" {% if show == 'archived' %}selected{% endif %}>Только архив</option>
   </select>
   <div>
     <button class="btn">Фильтр</button>
@@ -16,7 +23,17 @@
 
 <div class="card scrollbox">
 <table>
-  <thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Релиз</th><th>Спец.</th><th></th></tr></thead>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Название</th>
+      <th>Статус</th>
+      <th>Релиз</th>
+      <th>Спец.</th>
+      <th>Архив</th>
+      <th></th>
+    </tr>
+  </thead>
   <tbody>
   {% for p in items %}
     <tr>
@@ -25,16 +42,30 @@
       <td>{{ p.project_status }}</td>
       <td>{{ p.release_date|date:"Y-m-d H:i" }}</td>
       <td>{{ p.specialization }}</td>
+      <td>{% if p.is_archived %}да ({{ p.archived_at|date:"Y-m-d H:i" }}){% else %}нет{% endif %}</td>
       <td style="white-space:nowrap">
         <a class="btn" href="{% url 'adminboard:project-edit' p.project_id %}">Изм.</a>
         <form method="post" action="{% url 'adminboard:project-delete' p.project_id %}" style="display:inline">{% csrf_token %}
           <button class="btn btn-secondary" onclick="return confirm('Удалить проект?')">Удал.</button>
         </form>
         <a class="btn" href="{% url 'adminboard:project-members-admin' p.project_id %}">Участники</a>
+        {% if not p.is_archived %}
+          <form method="post" action="{% url 'adminboard:project-archive' p.project_id %}" style="display:inline">{% csrf_token %}
+            <button class="btn" title="Архивировать">📦</button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'adminboard:project-unarchive' p.project_id %}" style="display:inline">{% csrf_token %}
+            <select name="to_status" class="input" style="width:auto;display:inline-block;vertical-align:middle;">
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+            </select>
+            <button class="btn" title="Разархивировать">↩</button>
+          </form>
+        {% endif %}
       </td>
     </tr>
   {% empty %}
-    <tr><td colspan="6">Ничего не найдено</td></tr>
+    <tr><td colspan="7">Ничего не найдено</td></tr>
   {% endfor %}
   </tbody>
 </table>

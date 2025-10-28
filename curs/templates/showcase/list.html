@@ -2,16 +2,57 @@
 {% block content %}
 <h1>Витрина проектов</h1>
 
+<form method="get" class="card"
+      style="display:grid;grid-template-columns:1fr 200px 200px 220px auto;gap:8px;align-items:center;">
+  <!-- Поиск -->
+  <input class="input" name="q" value="{{ q }}" placeholder="поиск: название/спец." maxlength="120">
+
+  <!-- Специализация -->
+  <input class="input" name="spec" value="{{ spec }}" placeholder="специализация" maxlength="100">
+
+  {# Статус: для ADMIN показываем селект, иначе фиксируем 'active' скрытым полем #}
+  {% if request.user.is_authenticated and request.user.role == 'ADMIN' %}
+    <select class="input" name="status" title="Статус">
+      <option value="">— любой статус —</option>
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <input type="hidden" name="status" value="active">
+    <span class="muted">Показаны только активные</span>
+  {% endif %}
+
+  <!-- Сортировка -->
+  <select class="input" name="sort" title="Сортировка">
+    <option value="release_desc" {% if sort == 'release_desc' %}selected{% endif %}>Релиз ↓ (поздние вперёд)</option>
+    <option value="release_asc"  {% if sort == 'release_asc'  %}selected{% endif %}>Релиз ↑ (ранние вперёд)</option>
+    <option value="name_asc"     {% if sort == 'name_asc'     %}selected{% endif %}>Название A→Z</option>
+    <option value="name_desc"    {% if sort == 'name_desc'    %}selected{% endif %}>Название Z→A</option>
+    <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Создан ↓</option>
+    <option value="created_asc"  {% if sort == 'created_asc'  %}selected{% endif %}>Создан ↑</option>
+    <option value="id_desc"      {% if sort == 'id_desc'      %}selected{% endif %}>ID ↓</option>
+    <option value="id_asc"       {% if sort == 'id_asc'       %}selected{% endif %}>ID ↑</option>
+  </select>
+
+  <div>
+    <button class="btn">Фильтр</button>
+  </div>
+</form>
+
 <div class="grid">
   {% for p in items %}
     <div class="card">
       <h3 style="margin-bottom:6px;">
-        {% if request.user.role == 'ADMIN' %}<span class="muted">[{{ p.project_id }}]</span> {% endif %}
+        {% if request.user.role == 'ADMIN' %}
+          <span class="muted">[{{ p.project_id }}]</span>
+        {% endif %}
         <a href="{% url 'showcase:detail' p.project_id %}">{{ p.project_name }}</a>
       </h3>
+
       <div>
         Статус:
-        <span class="pill{% if p.project_status == 'active' %}{% elif p.project_status == 'paused' %} pill-blue{% else %}{% endif %}">
+        <span class="pill{% if p.project_status == 'paused' %} pill-blue{% elif p.project_status == 'archived' %} pill-muted{% endif %}">
           {{ p.project_status }}
         </span>
       </div>
@@ -26,9 +67,11 @@
 {% if items|length == page_size %}
   <div class="pager" style="margin-top:12px;">
     {% if page|add:-1 > 0 %}
-      <a class="btn btn-secondary" href="?page={{ page|add:-1 }}">← Назад</a>
+      <a class="btn btn-secondary"
+         href="?q={{ q }}&spec={{ spec }}&status={{ status }}&sort={{ sort }}&page={{ page|add:-1 }}">← Назад</a>
     {% endif %}
-    <a class="btn" href="?page={{ page|add:1 }}">Загрузить ещё →</a>
+    <a class="btn"
+       href="?q={{ q }}&spec={{ spec }}&status={{ status }}&sort={{ sort }}&page={{ page|add:1 }}">Загрузить ещё →</a>
   </div>
 {% endif %}
 {% endblock %}

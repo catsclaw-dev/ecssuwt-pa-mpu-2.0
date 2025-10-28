@@ -1,8 +1,4 @@
--- =========================
 -- УТИЛИТЫ ДЛЯ ДАТ/АРХИВАЦИИ
--- =========================
-
--- Универсальный помощник: если статус становится 'archived' и нет archived_at — проставить.
 CREATE OR REPLACE FUNCTION _touch_archived_at(p_status project_status, p_archived_at TIMESTAMPTZ)
 RETURNS TIMESTAMPTZ
 LANGUAGE plpgsql STABLE AS $$
@@ -20,11 +16,9 @@ LANGUAGE plpgsql AS $$
 DECLARE
   v_tbl text := TG_TABLE_NAME;
 BEGIN
-  -- Если в строке есть archived_at и он уже установлен,
-  -- запрещаем UPDATE, за исключением операций UNARCHIVE.
+  -- Если в строке есть archived_at и он уже установлен, запрещаем UPDATE, за исключением операций UNARCHIVE.
   IF (OLD.archived_at IS NOT NULL) THEN
-    -- Разрешим UPDATE только если NEW.archived_at стал NULL (unarchive)
-    -- или если меняются только системные «безопасные» поля (примерно).
+    -- UPDATE только если NEW.archived_at стал NULL(unarchive) или если меняются только системные «безопасные» поля (примерно).
     IF NEW.archived_at IS DISTINCT FROM OLD.archived_at AND NEW.archived_at IS NULL THEN
       RETURN NEW; -- unarchive — можно
     END IF;
@@ -36,9 +30,7 @@ BEGIN
   RETURN NEW;
 END $$;
 
--- =========================
 -- PROJECTS: АВТОАРХИВ И КОНСИСТЕНТНОСТЬ
--- =========================
 
 -- Автоархив по release_date при вставке/обновлении
 CREATE OR REPLACE FUNCTION fn_projects_auto_archive()
@@ -49,8 +41,6 @@ BEGIN
   IF NEW.release_date IS NOT NULL AND NEW.release_date < now() THEN
     NEW.project_status := 'archived';
   END IF;
-
-  -- Если статус archived — обеспечим archived_at
   NEW.archived_at := _touch_archived_at(NEW.project_status, NEW.archived_at);
 
   RETURN NEW;
@@ -89,9 +79,7 @@ BEFORE UPDATE ON projects
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
--- PROJECT MEMBERS: МЯГКОЕ ИСКЛЮЧЕНИЕ
--- =========================
+-- PROJECT MEMBERS
 CREATE OR REPLACE FUNCTION fn_member_leave(p_member_id BIGINT, p_left_at TIMESTAMPTZ DEFAULT now())
 RETURNS void
 LANGUAGE plpgsql AS $$
@@ -108,9 +96,7 @@ BEFORE UPDATE ON project_members
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
--- APPLICATION → PROJECT: УТВЕРЖДЕНИЕ ЗАЯВКИ
--- =========================
+-- APPLICATION + PROJECT: УТВЕРЖДЕНИЕ ЗАЯВКИ
 CREATE OR REPLACE FUNCTION fn_project_app_approve(app_id BIGINT)
 RETURNS BIGINT
 LANGUAGE plpgsql AS $$
@@ -131,7 +117,6 @@ BEGIN
     AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.application_id = app.application_id)
   RETURNING project_id INTO prj_id;
 
-  -- Если проект уже существовал — вернуть его id
   IF prj_id IS NULL THEN
     SELECT p.project_id INTO prj_id FROM projects p WHERE p.application_id = app_id;
   END IF;
@@ -139,13 +124,6 @@ BEGIN
   RETURN prj_id;
 END $$;
 
--- =========================
--- REPORTS: ВАЛИДАЦИЯ ПОЛЕЙ РЕВЬЮ
--- =========================
--- Требования:
---  - status='submitted' → не должно быть reviewed_by_prof/reviewed_at
---  - status IN ('approved','needs_fix') → reviewed_by_prof и reviewed_at ОБЯЗАТЕЛЬНЫ
---  - status='needs_fix' → review_comment ОБЯЗАТЕЛЕН (дублируем CHECK триггером для понятного текста ошибки)
 
 CREATE OR REPLACE FUNCTION fn_reports_validate_review_fields()
 RETURNS trigger
@@ -187,13 +165,7 @@ BEFORE UPDATE ON reports
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
--- TASK STATUS: АВТОАКТУАЛИЗАЦИЯ ПО ОТЧЁТАМ
--- =========================
--- Логика (последний по submitted_at отчёт):
---   approved  -> task.done
---   needs_fix -> task.in_review
---   submitted -> task.in_review
+-- TASK STATUS
 CREATE OR REPLACE FUNCTION fn_sync_task_status_from_reports(p_task_id BIGINT)
 RETURNS void
 LANGUAGE plpgsql AS $$
@@ -208,14 +180,12 @@ BEGIN
   LIMIT 1;
 
   IF v_status IS NULL THEN
-    -- нет отчётов — не трогаем
     RETURN;
   END IF;
 
   IF v_status = 'approved' THEN
     UPDATE tasks SET task_status='done' WHERE task_id = p_task_id AND task_status <> 'done';
   ELSE
-    -- submitted / needs_fix
     UPDATE tasks SET task_status='in_review' WHERE task_id = p_task_id AND task_status <> 'in_review';
   END IF;
 END $$;
@@ -240,18 +210,14 @@ AFTER UPDATE OF status, submitted_at ON reports
 FOR EACH ROW
 EXECUTE FUNCTION fn_after_report_upsert_sync_task();
 
--- =========================
 -- TASKS: БЛОКИРОВКА ДЛЯ АРХИВНЫХ
--- =========================
 DROP TRIGGER IF EXISTS trg_block_updates_on_archived_task ON tasks;
 CREATE TRIGGER trg_block_updates_on_archived_task
 BEFORE UPDATE ON tasks
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
--- APPLICATIONS / DETAILS: МЯГКАЯ АРХИВАЦИЯ И ЗАЩИТА
--- =========================
+-- APPLICATIONS / DETAILS БЛОК АРХИВАЦИИ
 DROP TRIGGER IF EXISTS trg_block_updates_on_archived_app ON project_applications;
 CREATE TRIGGER trg_block_updates_on_archived_app
 BEFORE UPDATE ON project_applications
@@ -264,9 +230,7 @@ BEFORE UPDATE ON application_details
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
--- USERS/STUDENTS/PROFESSORS: ЗАЩИТА
--- =========================
+-- USERS/STUDENTS/PROFESSORS БЛОК АРХИВАЦИИ
 DROP TRIGGER IF EXISTS trg_block_updates_on_archived_user ON users;
 CREATE TRIGGER trg_block_updates_on_archived_user
 BEFORE UPDATE ON users
@@ -285,10 +249,7 @@ BEFORE UPDATE ON professors
 FOR EACH ROW
 EXECUTE FUNCTION fn_block_updates_on_archived();
 
--- =========================
 -- ПУБЛИЧНЫЕ API ДЛЯ АРХИВАЦИИ / РАЗАРХИВАЦИИ
--- =========================
--- Проекты
 CREATE OR REPLACE FUNCTION fn_archive_project(p_project_id BIGINT, p_archived_at TIMESTAMPTZ DEFAULT now())
 RETURNS void
 LANGUAGE plpgsql AS $$
@@ -388,9 +349,7 @@ BEGIN
   END IF;
 END $$;
 
--- =========================
--- PROJECT_SCHEDULE: ЗАЩИТА ДЛЯ АРХИВА
--- =========================
+-- PROJECT_SCHEDULE
 DROP TRIGGER IF EXISTS trg_block_updates_on_archived_schedule ON project_schedule;
 CREATE TRIGGER trg_block_updates_on_archived_schedule
 BEFORE UPDATE ON project_schedule

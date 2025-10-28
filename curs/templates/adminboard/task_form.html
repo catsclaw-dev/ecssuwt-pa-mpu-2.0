@@ -2,10 +2,11 @@
 {% block content %}
 <h1>Новая задача</h1>
 
+{# --- Форма выбора проекта (GET) --- #}
 <form class="card" method="get" style="margin-bottom:12px">
   <div style="display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:center">
-    <input class="input" name="q" value="{{ q }}" placeholder="ID / название / специализация">
-    <button class="btn">Найти проект</button>
+    <input class="input" name="q" value="{{ q }}" placeholder="ID / название / специализация" maxlength="120">
+    <button class="btn" formnovalidate>Найти проект</button>
     {% if sel_pid %}
       <span class="muted">Выбран проект: {{ sel_pid }}</span>
     {% endif %}
@@ -13,12 +14,17 @@
 
   <div class="scrollbox" style="margin-top:8px">
     <table>
-      <thead><tr><th>Выбрать</th><th>ID</th><th>Название</th><th>Спец.</th><th>Статус</th></tr></thead>
+      <thead>
+        <tr><th>Выбрать</th><th>ID</th><th>Название</th><th>Спец.</th><th>Статус</th></tr>
+      </thead>
       <tbody>
       {% for p in projs %}
         <tr>
           <td>
-            <input type="radio" name="project_id" value="{{ p.project_id }}"
+            <input type="radio"
+                   name="project_id"
+                   value="{{ p.project_id }}"
+                   {% if forloop.first %}required{% endif %}
                    {% if sel_pid|stringformat:'s' == p.project_id|stringformat:'s' %}checked{% endif %}>
           </td>
           <td>{{ p.project_id }}</td>
@@ -35,22 +41,30 @@
 
   <div style="margin-top:8px">
     {% if page > 1 %}
-      <button class="btn btn-secondary" name="page" value="{{ page|add:-1 }}">← Назад</button>
+      <button class="btn btn-secondary" name="page" value="{{ page|add:-1 }}" formnovalidate>← Назад</button>
     {% endif %}
     {% if has_next %}
-      <button class="btn" name="page" value="{{ page|add:1 }}">Далее →</button>
+      <button class="btn" name="page" value="{{ page|add:1 }}" formnovalidate>Далее →</button>
     {% endif %}
+    {# Эта кнопка требует выбранного радио #}
     <button class="btn" name="page" value="{{ page }}">Выбрать проект</button>
   </div>
 </form>
 
+{# --- Форма создания задачи (POST) --- #}
 <form method="post" class="card">{% csrf_token %}
-  <input type="hidden" name="project_id" value="{{ sel_pid }}">
+  {# требуем наличие выбранного проекта в POST; проверяем, что это число #}
+  <input type="hidden" name="project_id" value="{{ sel_pid }}" required pattern="^\d+$">
 
   <div class="grid2">
     <div class="field">
       <label>Название*</label>
-      <input class="input" name="task_name" required>
+      <input class="input"
+             name="task_name"
+             required
+             minlength="3" maxlength="140"
+             placeholder="Короткое название задачи">
+      <span class="hint">От 3 до 140 символов</span>
     </div>
 
     <div class="field">
@@ -60,11 +74,13 @@
           <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
       </select>
+      <span class="hint">Выберите статус задачи</span>
     </div>
 
     <div class="field">
       <label>Дедлайн</label>
       <input class="input" type="datetime-local" name="task_deadline">
+      <span class="hint">Необязательно. Укажите дату и время</span>
     </div>
 
     <div class="field">
@@ -77,13 +93,16 @@
       </select>
       {% if not sel_pid %}
         <small class="muted">Сначала выберите проект в форме выше и нажмите «Выбрать проект».</small>
+      {% else %}
+        <span class="hint">Необязательно. Можно назначить позже</span>
       {% endif %}
     </div>
   </div>
 
   <div class="field">
     <label>Описание</label>
-    <textarea class="textarea" name="task_description"></textarea>
+    <textarea class="textarea" name="task_description" maxlength="4000" placeholder="Подробности задачи, критерии приёмки и т.п."></textarea>
+    <span class="hint">До 4000 символов</span>
   </div>
 
   <p style="margin-top:12px">

@@ -4,54 +4,97 @@
 
 <form method="post" class="card">{% csrf_token %}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <label>Логин*<br><input class="input" name="login" value="{{ user.login }}" required></label>
-    <label>Роль*<br>
+    <label>
+      Логин*
+      <br>
+      <input class="input"
+             name="login"
+             value="{{ user.login }}"
+             required
+             minlength="3" maxlength="50"
+             pattern="^[A-Za-z0-9._-]{3,50}$"
+             autocomplete="username"
+             {% if mode == 'new' %}autofocus{% endif %}>
+      <span class="hint">3–50 символов: латиница/цифры . _ -</span>
+    </label>
+
+    <label>
+      Роль*
+      <br>
       <select class="input" name="role" id="role" required>
         {% for r in roles %}<option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
       </select>
+      <span class="hint">Выберите роль</span>
     </label>
-    <label>Фамилия*<br><input class="input" name="last_name" value="{{ user.last_name }}" required></label>
-    <label>Имя*<br><input class="input" name="first_name" value="{{ user.first_name }}" required></label>
-    <label>Отчество*<br><input class="input" name="middle_name" value="{{ user.middle_name }}" required></label>
+
+    <label>Фамилия*<br>
+      <input class="input" name="last_name" value="{{ user.last_name }}" required minlength="2" maxlength="100">
+      <span class="hint">Минимум 2 символа</span>
+    </label>
+
+    <label>Имя*<br>
+      <input class="input" name="first_name" value="{{ user.first_name }}" required minlength="2" maxlength="100">
+      <span class="hint">Минимум 2 символа</span>
+    </label>
+
+    <label>Отчество*<br>
+      <input class="input" name="middle_name" value="{{ user.middle_name }}" required minlength="2" maxlength="100">
+      <span class="hint">Минимум 2 символа</span>
+    </label>
+
     <label>Пароль{% if mode == 'edit' %} (оставьте пустым для без изменений){% endif %}*<br>
-      <input class="input" type="password" name="password" {% if mode == 'new' %}required{% endif %}>
+      <input class="input" type="password" name="password" {% if mode == 'new' %}required{% endif %} minlength="8" autocomplete="new-password">
+      <span class="hint">Минимум 8 символов</span>
     </label>
-    <label>Телефон*<br><input class="input" name="contact_phone" value="{{ user.contact_phone }}" required></label>
-    <label>E-mail*<br><input class="input" name="contact_email" value="{{ user.contact_email }}" required></label>
-    <label>Telegram<br><input class="input" name="contact_telegram" value="{{ user.contact_telegram }}"></label>
+
+    <label>Телефон*<br>
+      <input class="input" name="contact_phone" value="{{ user.contact_phone }}" required inputmode="tel"
+             pattern="^\+?\d[\d\s\-\(\)]{7,}$" maxlength="32" placeholder="+7 900 000-00-00">
+      <span class="hint">Например: +7 900 000-00-00</span>
+    </label>
+
+    <label>E-mail*<br>
+      <input class="input" type="email" name="contact_email" value="{{ user.contact_email }}" required maxlength="120" autocomplete="email">
+      <span class="hint">Корректный e-mail</span>
+    </label>
+
+    <label>Telegram<br>
+      <input class="input" name="contact_telegram" value="{{ user.contact_telegram }}" pattern="^@?[A-Za-z0-9_]{5,32}$" maxlength="32" placeholder="@username">
+      <span class="hint">5–32 символов, латиница/цифры/_, можно с @</span>
+    </label>
   </div>
 
   <hr>
 
-  <!-- Блок STUDENT -->
+  <!-- STUDENT: без required (валидация — на сервере) -->
   <div id="role-student" class="role-block">
     <h3>Данные студента</h3>
-    <label>Группа*<br><input class="input" name="st_group_number" value="{{ user.st_group_number }}"></label>
-    <label>Факультет*<br><input class="input" name="st_faculty" value="{{ user.st_faculty }}"></label>
+    <label>Группа*<br>
+      <input class="input" name="st_group_number" value="{{ user.st_group_number }}" maxlength="50">
+      <span class="hint">Укажите учебную группу</span>
+    </label>
+    <label>Факультет*<br>
+      <input class="input" name="st_faculty" value="{{ user.st_faculty }}" maxlength="100">
+      <span class="hint">Укажите факультет</span>
+    </label>
   </div>
 
-  <!-- Блок PROFESSOR -->
+  <!-- PROFESSOR: без required (валидация — на сервере) -->
   <div id="role-professor" class="role-block">
     <h3>Данные преподавателя</h3>
-    <label>Кафедра*<br><input class="input" name="pr_department" value="{{ user.pr_department }}"></label>
-    <label>Факультет*<br><input class="input" name="pr_faculty" value="{{ user.pr_faculty }}"></label>
+    <label>Кафедра*<br>
+      <input class="input" name="pr_department" value="{{ user.pr_department }}" maxlength="100">
+      <span class="hint">Укажите кафедру</span>
+    </label>
+    <label>Факультет*<br>
+      <input class="input" name="pr_faculty" value="{{ user.pr_faculty }}" maxlength="100">
+      <span class="hint">Укажите факультет</span>
+    </label>
   </div>
 
   <p style="margin-top:12px">
-    <button class="btn">Сохранить</button>
+    <button class="btn" type="submit">Сохранить</button>
     <a class="btn btn-secondary" href="{% url 'adminboard:users-list' %}">Отмена</a>
   </p>
 </form>
-
-<script>
-(function(){
-  function toggleRole() {
-    var role = document.getElementById('role').value;
-    document.getElementById('role-student').style.display   = (role === 'STUDENT')   ? '' : 'none';
-    document.getElementById('role-professor').style.display = (role === 'PROFESSOR') ? '' : 'none';
-  }
-  document.getElementById('role').addEventListener('change', toggleRole);
-  toggleRole();
-})();
-</script>
 {% endblock %}

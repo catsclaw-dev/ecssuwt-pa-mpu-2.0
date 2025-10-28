@@ -2,13 +2,18 @@
 {% block content %}
 <h1>Пользователи</h1>
 
-<form method="get" class="card" style="display:grid; grid-template-columns: 1fr 200px auto; gap:8px; align-items:center;">
+<form method="get" class="card" style="display:grid; grid-template-columns: 1fr 200px 180px auto; gap:8px; align-items:center;">
   <input class="input" name="q" value="{{ q }}" placeholder="логин / имя">
   <select class="input" name="role">
     <option value="">— все роли —</option>
     {% for r in roles %}
       <option value="{{ r }}" {% if role == r %}selected{% endif %}>{{ r }}</option>
     {% endfor %}
+  </select>
+  <select class="input" name="show">
+    <option value="active"   {% if show == 'active' %}selected{% endif %}>Только активные</option>
+    <option value="archived" {% if show == 'archived' %}selected{% endif %}>Только архив</option>
+    <option value="all"      {% if show == 'all' %}selected{% endif %}>Все</option>
   </select>
   <div>
     <button class="btn">Фильтр</button>
@@ -18,7 +23,17 @@
 
 <div class="card scrollbox">
   <table>
-    <thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>ФИО</th><th>Создан</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Логин</th>
+        <th>Роль</th>
+        <th>ФИО</th>
+        <th>Создан</th>
+        <th>Архив</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
     {% for u in users %}
       <tr>
@@ -27,22 +42,36 @@
         <td>{{ u.role }}</td>
         <td>{{ u.last_name }} {{ u.first_name }}</td>
         <td>{{ u.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{% if u.is_archived %}да ({{ u.archived_at|date:"Y-m-d H:i" }}){% else %}нет{% endif %}</td>
         <td style="white-space:nowrap">
           <a class="btn" href="{% url 'adminboard:user-edit' u.user_id %}">Изм.</a>
           <form method="post" action="{% url 'adminboard:user-delete' u.user_id %}" style="display:inline">{% csrf_token %}
             <button class="btn btn-secondary" onclick="return confirm('Удалить пользователя?')">Удал.</button>
           </form>
+          {% if not u.is_archived %}
+            <form method="post" action="{% url 'adminboard:user-archive' u.user_id %}" style="display:inline">{% csrf_token %}
+              <button class="btn" title="Архивировать">📦</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'adminboard:user-unarchive' u.user_id %}" style="display:inline">{% csrf_token %}
+              <button class="btn" title="Разархивировать">↩</button>
+            </form>
+          {% endif %}
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="6">Ничего не найдено</td></tr>
+      <tr><td colspan="7">Ничего не найдено</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 
 <div style="margin-top:8px">
-  {% if page > 1 %}<a class="btn btn-secondary" href="?q={{ q }}&role={{ role }}&page={{ page|add:-1 }}">← Назад</a>{% endif %}
-  {% if has_next %}<a class="btn" href="?q={{ q }}&role={{ role }}&page={{ page|add:1 }}">Далее →</a>{% endif %}
+  {% if page > 1 %}
+    <a class="btn btn-secondary" href="?q={{ q }}&role={{ role }}&show={{ show }}&page={{ page|add:-1 }}">← Назад</a>
+  {% endif %}
+  {% if has_next %}
+    <a class="btn" href="?q={{ q }}&role={{ role }}&show={{ show }}&page={{ page|add:1 }}">Далее →</a>
+  {% endif %}
 </div>
 {% endblock %}

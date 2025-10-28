@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Задачи</h1>
 
-<form method="get" class="card" style="display:grid;grid-template-columns:1fr 180px 320px auto;gap:8px;align-items:center;">
+<form method="get" class="card" style="display:grid;grid-template-columns:1fr 180px 320px 180px auto;gap:8px;align-items:center;">
   <input class="input" name="q" value="{{ q }}" placeholder="название задачи">
   <select class="input" name="status">
     <option value="">— все статусы —</option>
@@ -18,6 +18,11 @@
       </option>
     {% endfor %}
   </select>
+  <select class="input" name="show">
+    <option value="active"   {% if show == 'active' %}selected{% endif %}>Только активные</option>
+    <option value="archived" {% if show == 'archived' %}selected{% endif %}>Только архив</option>
+    <option value="all"      {% if show == 'all' %}selected{% endif %}>Все</option>
+  </select>
   <div>
     <button class="btn">Фильтр</button>
     <a class="btn btn-secondary" href="{% url 'adminboard:task-new' %}">+ Новая</a>
@@ -27,7 +32,15 @@
 <div class="card scrollbox">
   <table>
     <thead>
-      <tr><th>ID</th><th>Проект</th><th>Название</th><th>Статус</th><th>Дедлайн</th><th></th></tr>
+      <tr>
+        <th>ID</th>
+        <th>Проект</th>
+        <th>Название</th>
+        <th>Статус</th>
+        <th>Дедлайн</th>
+        <th>Архив</th>
+        <th></th>
+      </tr>
     </thead>
     <tbody>
       {% for t in items %}
@@ -37,6 +50,7 @@
           <td>{{ t.task_name }}</td>
           <td>{{ t.task_status }}</td>
           <td>{{ t.task_deadline|date:"Y-m-d H:i" }}</td>
+          <td>{% if t.is_archived %}да ({{ t.archived_at|date:"Y-m-d H:i" }}){% else %}нет{% endif %}</td>
           <td style="white-space:nowrap">
             <a class="btn" href="{% url 'adminboard:task-edit' t.task_id %}">Изм.</a>
             <form method="post" action="{% url 'adminboard:task-delete' t.task_id %}" style="display:inline">{% csrf_token %}
@@ -45,7 +59,7 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="6">Ничего не найдено</td></tr>
+        <tr><td colspan="7">Ничего не найдено</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -53,10 +67,12 @@
 
 <div style="margin-top:8px">
   {% if page > 1 %}
-    <a class="btn btn-secondary" href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&page={{ page|add:-1 }}">← Назад</a>
+    <a class="btn btn-secondary"
+       href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&show={{ show }}&page={{ page|add:-1 }}">← Назад</a>
   {% endif %}
   {% if has_next %}
-    <a class="btn" href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&page={{ page|add:1 }}">Далее →</a>
+    <a class="btn"
+       href="?q={{ q }}&status={{ status }}&project_id={{ project_id }}&show={{ show }}&page={{ page|add:1 }}">Далее →</a>
   {% endif %}
 </div>
 {% endblock %}

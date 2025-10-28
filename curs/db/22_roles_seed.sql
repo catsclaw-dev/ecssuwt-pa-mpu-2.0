@@ -58,7 +58,7 @@ GRANT SELECT ON
   project_schedule
 TO role_professor;
 
-GRANT SELECT ON project_members TO role_student;
+GRANT SELECT ON project_members, students, professors TO role_student;
 
 GRANT INSERT, UPDATE ON tasks, project_schedule TO role_professor;
 

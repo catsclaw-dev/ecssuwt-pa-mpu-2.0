@@ -97,20 +97,27 @@ def users_list(request):
 
     q = (request.GET.get("q") or "").strip()
     role = (request.GET.get("role") or "").strip().upper()
+    show = (request.GET.get("show") or "active").strip().lower()  # active|archived|all
     page = max(int(request.GET.get("page", 1) or 1), 1)
     offset = (page - 1) * PAGE_SIZE
 
-    # если роль не выбрана — передаём NULL и проверяем IS NULL в SQL
     role_param = role if role in ROLES else None
+    arch_sql = {
+        "active": "archived_at IS NULL",
+        "archived": "archived_at IS NOT NULL",
+        "all": "TRUE",
+    }.get(show, "archived_at IS NULL")
 
     with connection.cursor() as cur:
         cur.execute(
-            """
-            SELECT user_id, login, role, first_name, last_name, created_at
+            f"""
+            SELECT user_id, login, role, first_name, last_name, created_at, archived_at,
+                   (archived_at IS NOT NULL) AS is_archived
             FROM users
             WHERE (%s = '' OR login ILIKE '%%'||%s||'%%'
                            OR first_name ILIKE '%%'||%s||'%%'
                            OR last_name  ILIKE '%%'||%s||'%%')
+              AND ({arch_sql})
               AND (%s IS NULL OR role = %s)
             ORDER BY user_id DESC
             LIMIT %s OFFSET %s
@@ -124,11 +131,37 @@ def users_list(request):
         "q": q,
         "role": role if role in ROLES else "",
         "roles": ROLES,
+        "show": show,
         "page": page,
         "page_size": PAGE_SIZE,
         "has_next": len(users) == PAGE_SIZE,
     }
     return render(request, "adminboard/users_list.html", ctx)
+
+
+@login_required
+@require_POST
+def user_archive(request, user_id: int):
+    if resp := _admin_or_403(request):
+        return resp
+    with connection.cursor() as cur:
+        cur.execute(
+            "UPDATE users SET archived_at = COALESCE(archived_at, now()) WHERE user_id=%s",
+            [user_id],
+        )
+    messages.success(request, "Пользователь заархивирован")
+    return redirect(request.META.get("HTTP_REFERER", "adminboard:users-list"))
+
+
+@login_required
+@require_POST
+def user_unarchive(request, user_id: int):
+    if resp := _admin_or_403(request):
+        return resp
+    with connection.cursor() as cur:
+        cur.execute("UPDATE users SET archived_at = NULL WHERE user_id=%s", [user_id])
+    messages.success(request, "Пользователь разархивирован")
+    return redirect(request.META.get("HTTP_REFERER", "adminboard:users-list"))
 
 
 @login_required
@@ -223,19 +256,21 @@ def user_edit(request, user_id: int):
     if resp := _admin_or_403(request):
         return resp
 
+    # --- загрузим пользователя и связанные записи по ролям
     with connection.cursor() as cur:
         cur.execute("SELECT * FROM users WHERE user_id=%s", [user_id])
         user = _fetchone_dict(cur)
         if not user:
             raise Http404("User not found")
-        # подтянем доп. инфо по роли (если есть)
-        st = pr = None
+
         cur.execute("SELECT * FROM students WHERE user_id=%s", [user_id])
         st = _fetchone_dict(cur)
+
         cur.execute("SELECT * FROM professors WHERE user_id=%s", [user_id])
         pr = _fetchone_dict(cur)
 
     if request.method == "POST":
+        # --- чтение полей формы
         login = (request.POST.get("login") or "").strip()
         role = (request.POST.get("role") or "").strip().upper()
         first = (request.POST.get("first_name") or "").strip()
@@ -253,6 +288,7 @@ def user_edit(request, user_id: int):
         pr_dept = (request.POST.get("pr_department") or "").strip()
         pr_faculty = (request.POST.get("pr_faculty") or "").strip()
 
+        # --- валидация как было
         role_ok = role in ROLES
         base_ok = all([login, role_ok, first, last, middle, phone, email])
         role_ok_extra = (
@@ -260,16 +296,47 @@ def user_edit(request, user_id: int):
             or (role == "PROFESSOR" and pr_dept and pr_faculty)
             or (role == "ADMIN")
         )
-
         if not (base_ok and role_ok_extra):
             messages.error(request, "Заполните все обязательные поля.")
         else:
+            # --- дополнительная проверка ПЕРЕД изменением роли:
+            # запрещаем убирать PROFESSOR, если есть проверенные отчёты
+            old_role = user.get("role")
+            if old_role == "PROFESSOR" and role != "PROFESSOR":
+                with connection.cursor() as cur:
+                    cur.execute(
+                        "SELECT professor_id FROM professors WHERE user_id=%s",
+                        [user_id],
+                    )
+                    r = cur.fetchone()
+                    if r:
+                        prof_id = r[0]
+                        cur.execute(
+                            """
+                            SELECT COUNT(*)
+                            FROM reports
+                            WHERE reviewed_by_prof = %s
+                              AND status IN ('approved','needs_fix')
+                            """,
+                            [prof_id],
+                        )
+                        cnt = cur.fetchone()[0]
+                        if cnt > 0:
+                            messages.error(
+                                request,
+                                f"Нельзя снять роль PROFESSOR: есть {cnt} проверенных отчётов с этим ревьюером.",
+                            )
+                            return redirect("adminboard:user-edit", user_id=user_id)
+
+            # --- обновляем users
             with connection.cursor() as cur:
                 if pwd:
                     ph = make_password(pwd)
                     cur.execute(
-                        """UPDATE users SET login=%s, role=%s, first_name=%s, middle_name=%s,
-                                             last_name=%s, password_hash=%s, user_contacts=%s::jsonb
+                        """UPDATE users SET
+                               login=%s, role=%s,
+                               first_name=%s, middle_name=%s, last_name=%s,
+                               password_hash=%s, user_contacts=%s::jsonb
                            WHERE user_id=%s""",
                         [
                             login,
@@ -284,40 +351,70 @@ def user_edit(request, user_id: int):
                     )
                 else:
                     cur.execute(
-                        """UPDATE users SET login=%s, role=%s, first_name=%s, middle_name=%s,
-                                             last_name=%s, user_contacts=%s::jsonb
+                        """UPDATE users SET
+                               login=%s, role=%s,
+                               first_name=%s, middle_name=%s, last_name=%s,
+                               user_contacts=%s::jsonb
                            WHERE user_id=%s""",
                         [
                             login,
                             role,
                             first,
                             middle,
+                            last,
                             json.dumps(contacts, ensure_ascii=False),
                             user_id,
                         ],
                     )
 
-                # синхронизация роль-таблиц
-                cur.execute("DELETE FROM admins WHERE user_id=%s", [user_id])
-                cur.execute("DELETE FROM professors WHERE user_id=%s", [user_id])
-                cur.execute("DELETE FROM students WHERE user_id=%s", [user_id])
-                if role == "ADMIN":
-                    cur.execute("INSERT INTO admins (user_id) VALUES (%s)", [user_id])
+                # --- синхронизация роль-таблиц БЕЗ потери professor_id
+                if role == "PROFESSOR":
+                    # upsert в professors
+                    cur.execute(
+                        "UPDATE professors SET department=%s, faculty=%s WHERE user_id=%s",
+                        [pr_dept, pr_faculty, user_id],
+                    )
+                    if cur.rowcount == 0:
+                        cur.execute(
+                            "INSERT INTO professors (user_id, department, faculty) VALUES (%s,%s,%s)",
+                            [user_id, pr_dept, pr_faculty],
+                        )
+                    # подчистим другие роли
+                    cur.execute("DELETE FROM admins   WHERE user_id=%s", [user_id])
+                    cur.execute("DELETE FROM students WHERE user_id=%s", [user_id])
+
                 elif role == "STUDENT":
+                    # upsert в students
                     cur.execute(
-                        "INSERT INTO students (user_id, group_number, faculty) VALUES (%s,%s,%s)",
-                        [user_id, st_group, st_faculty],
+                        "UPDATE students SET group_number=%s, faculty=%s WHERE user_id=%s",
+                        [st_group, st_faculty, user_id],
                     )
-                elif role == "PROFESSOR":
-                    cur.execute(
-                        "INSERT INTO professors (user_id, department, faculty) VALUES (%s,%s,%s)",
-                        [user_id, pr_dept, pr_faculty],
-                    )
+                    if cur.rowcount == 0:
+                        cur.execute(
+                            "INSERT INTO students (user_id, group_number, faculty) VALUES (%s,%s,%s)",
+                            [user_id, st_group, st_faculty],
+                        )
+                    # подчистим другие роли
+                    cur.execute("DELETE FROM admins WHERE user_id=%s", [user_id])
+                    # professor теперь можно удалить (мы проверили, что нет reviewed-отчётов)
+                    cur.execute("DELETE FROM professors WHERE user_id=%s", [user_id])
+
+                else:  # role == "ADMIN"
+                    # upsert в admins
+                    cur.execute("SELECT 1 FROM admins WHERE user_id=%s", [user_id])
+                    if not cur.fetchone():
+                        cur.execute(
+                            "INSERT INTO admins (user_id) VALUES (%s)", [user_id]
+                        )
+                    # подчистим другие роли
+                    cur.execute("DELETE FROM students   WHERE user_id=%s", [user_id])
+                    # professor теперь можно удалить (мы проверили выше при смене роли)
+                    cur.execute("DELETE FROM professors WHERE user_id=%s", [user_id])
 
             messages.success(request, "Пользователь обновлён")
             return redirect("adminboard:users-list")
 
-    # распакуем контакты для формы
+    # --- распакуем контакты для формы
     try:
         contacts = json.loads(user.get("user_contacts") or "{}")
     except Exception:
@@ -327,7 +424,7 @@ def user_edit(request, user_id: int):
     user["contact_email"] = contacts.get("email", "")
     user["contact_telegram"] = contacts.get("telegram", "")
 
-    # Преполним поля по роли для удобства
+    # --- подставим поля по роли
     user["st_group_number"] = (st or {}).get("group_number", "")
     user["st_faculty"] = (st or {}).get("faculty", "")
     user["pr_department"] = (pr or {}).get("department", "")
@@ -415,17 +512,27 @@ def projects_list(request):
         return resp
     q = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "").strip()
+    show = (
+        (request.GET.get("show") or "all").strip().lower()
+    )  # active|archived|all — по archived_at
     status_param = status if status in PROJECT_STATUSES else None
+    arch_sql = {
+        "active": "p.archived_at IS NULL",
+        "archived": "p.archived_at IS NOT NULL",
+        "all": "TRUE",
+    }.get(show, "TRUE")
 
     with connection.cursor() as cur:
         cur.execute(
-            """
-            SELECT project_id, project_name, project_status, release_date, specialization
-            FROM projects
-            WHERE (%s = '' OR project_name ILIKE '%%'||%s||'%%'
-                           OR specialization ILIKE '%%'||%s||'%%')
-              AND (%s IS NULL OR project_status = %s::project_status)
-            ORDER BY project_id DESC
+            f"""
+            SELECT p.project_id, p.project_name, p.project_status, p.release_date, p.specialization,
+                   p.archived_at, (p.archived_at IS NOT NULL) AS is_archived
+            FROM projects p
+            WHERE (%s = '' OR p.project_name ILIKE '%%'||%s||'%%'
+                           OR p.specialization ILIKE '%%'||%s||'%%')
+              AND (%s IS NULL OR p.project_status = %s::project_status)
+              AND ({arch_sql})
+            ORDER BY p.project_id DESC
             LIMIT 300
             """,
             [q, q, q, status_param, status_param],
@@ -440,6 +547,7 @@ def projects_list(request):
             "q": q,
             "status": status_param or "",
             "statuses": PROJECT_STATUSES,
+            "show": show,
         },
     )
 
@@ -472,6 +580,48 @@ def project_new(request):
         "adminboard/project_form.html",
         {"mode": "new", "project": {}, "statuses": PROJECT_STATUSES},
     )
+
+
+@login_required
+@require_POST
+def project_archive(request, project_id: int):
+    if resp := _admin_or_403(request):
+        return resp
+    # В проектной модели архив — это и статус, и archived_at (ставится триггером/функцией)
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE projects
+               SET project_status='archived'
+             WHERE project_id=%s AND project_status <> 'archived'
+        """,
+            [project_id],
+        )
+    messages.success(request, "Проект заархивирован")
+    return redirect(request.META.get("HTTP_REFERER", "adminboard:projects-list"))
+
+
+@login_required
+@require_POST
+def project_unarchive(request, project_id: int):
+    if resp := _admin_or_403(request):
+        return resp
+    to_status = (request.POST.get("to_status") or "active").strip()
+    if to_status not in ("active", "paused"):
+        to_status = "active"
+    with connection.cursor() as cur:
+        # снятие archived_at делается прямо, статус возвращаем в выбранный
+        cur.execute(
+            """
+            UPDATE projects
+               SET archived_at = NULL,
+                   project_status = %s::project_status
+             WHERE project_id=%s
+        """,
+            [to_status, project_id],
+        )
+    messages.success(request, "Проект разархивирован")
+    return redirect(request.META.get("HTTP_REFERER", "adminboard:projects-list"))
 
 
 @login_required
@@ -533,23 +683,33 @@ def tasks_list(request):
 
     q = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "").strip()
+    show = (
+        (request.GET.get("show") or "active").strip().lower()
+    )  # active|archived|all по t.archived_at
     status_param = status if status in TASK_STATUSES else None
     proj = (request.GET.get("project_id") or "").strip()
     proj_param = proj if proj.isdigit() else None
 
     page = max(int(request.GET.get("page", 1) or 1), 1)
     offset = (page - 1) * PAGE_SIZE
+    arch_sql = {
+        "active": "t.archived_at IS NULL",
+        "archived": "t.archived_at IS NOT NULL",
+        "all": "TRUE",
+    }.get(show, "t.archived_at IS NULL")
 
     with connection.cursor() as cur:
         cur.execute(
-            """
+            f"""
             SELECT t.task_id, t.task_name, t.task_status, t.task_deadline,
+                   t.archived_at, (t.archived_at IS NOT NULL) AS is_archived,
                    p.project_id, p.project_name
             FROM tasks t
             JOIN projects p ON p.project_id = t.project_id
             WHERE (%s = '' OR t.task_name ILIKE '%%'||%s||'%%')
               AND (%s IS NULL OR t.task_status = %s::task_status)
               AND (%s IS NULL OR p.project_id = %s::bigint)
+              AND ({arch_sql})
             ORDER BY t.task_id DESC
             LIMIT %s OFFSET %s
             """,
@@ -578,6 +738,7 @@ def tasks_list(request):
         "project_id": proj_param or "",
         "statuses": TASK_STATUSES,
         "projs": projs,
+        "show": show,
         "page": page,
         "page_size": PAGE_SIZE,
         "has_next": len(items) == PAGE_SIZE,
